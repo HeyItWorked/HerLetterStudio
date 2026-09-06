@@ -22,7 +22,7 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try expandedVoiceEditing()
         try expressionPreservesDocumentsAndPrint()
         try bundledFontsResolve()
-        print("PASS: 9 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, expanded edits, fonts)")
+        print("PASS: 10 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, expanded edits, fonts, expression/PDF compatibility)")
     }
     @MainActor static func expressionPreservesDocumentsAndPrint() throws {
         let original = LetterDocument.example
@@ -45,6 +45,8 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         }
         try expect(VoiceCommand.parse("A little more tender.") == .expression(.tender), "tender voice instruction")
         try expect(VoiceCommand.parse("Less formal") == .expression(.familiar), "familiar voice instruction")
+        try expect(VoiceCommand.parse("Change ink to ox blood sincerity") == .ink(.oxblood), "spaced ink name")
+        try expect(VoiceCommand.parse("Change it to oxblood sincerity") == .ink(.oxblood), "natural ink instruction")
         try expect(VoiceCommand.parse("Use oxblood") == .ink(.oxblood), "ink voice instruction")
         try expect(VoiceCommand.parse("Send to the writing desk") == .printPreview, "writing desk must open preview")
     }

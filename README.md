@@ -8,7 +8,7 @@ Requires macOS 26. The built app is at `build/Letter Studio.app`.
 
 1. Open the app and choose New. Add a recipient, occasion, notes, or reference photos in Context.
 2. Press the microphone button and allow microphone access. English speech recognition runs on device; Apple may download speech assets on first use. Press again to finish the last words.
-3. Use Writing/Edit to correct text. Fonts opens a specimen book: choose a style from the index, then click Edit sample text to try your own words. Materials controls size, ink, stationery, and Letter/A4 paper.
+3. Use Writing/Edit to correct text. Fonts opens a specimen book: choose a style from the index, then click Edit sample text to try your own words. Expression offers Tender, Familiar, and Reflective hands, a resonance control, five inks, and stationery. Expand Lettering & size for font size; choose Letter/A4 below.
 4. Open Voice Edit and press Speak an edit, speak, then Apply edit. Or type the same instruction and click Apply instruction. Recognized instructions and edit feedback remain visible. Ordinary dictation is treated as letter text.
 5. Open Print to review every page, save a PDF, or choose a printer in the native Mac panel. Enable paper color to print the stationery tint; leave it off when using colored paper.
 
@@ -64,3 +64,9 @@ Phrase edits require exactly one matching phrase; ambiguous edits leave the text
 The correspondence desk uses a fixed dictation bar, an ivory reference folio, a seven-style specimen book, and a row-based archive. Focus hides the folio. Hover/press feedback and spatial transitions respect Reduce Motion. See `DESIGN.md` for the visual thesis and review decisions.
 
 The optional `interaction` verifier clicks and types in an isolated native window. It checks font selection across a row, editing the specimen, opening/searching/reopening the archive, and saves screenshots of the typed specimen and empty search results. It is a fixed-window mouse/text smoke test, not a complete keyboard or VoiceOver audit. It does not open your saved drafts or request the microphone.
+
+## Longhand Console exploration
+
+Open **Expression**, choose a hand, adjust **Resonance**, and click **Watch the ink**. Scroll down for the five inks and paper. Voice Edit accepts “a little more tender”, “less formal”, “more reflective”, “more restrained”, “more expressive”, and “change ink to oxblood sincerity”. These change presentation, not wording. “Send to the writing desk” opens print review.
+
+Expression settings are saved with each letter and support undo/redo. Reset removes expression spacing/pacing while keeping your font and ink. This remains font-based rendering: it does not synthesize real pen strokes, infer emotion, or control a calligraphy robot. See [the feasibility map](LONGHAND.md) for the narrative's software, research, and hardware boundaries.

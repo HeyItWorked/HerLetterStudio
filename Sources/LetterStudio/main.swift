@@ -80,6 +80,7 @@ import LetterCore
             if arguments.contains("--preparing") { model.speech.state = .preparing; model.speech.status = "Preparing on-device dictation…" }
             if arguments.contains("--fonts") { model.showFonts = true }
             if arguments.contains("--voice-edit") { model.panel = .voice }
+            if arguments.contains("--expression") { model.panel = .materials; model.chooseExpression(.tender); model.chooseInk(.oxblood) }
             if arguments.contains("--materials") { model.panel = .materials; model.document.stationery = .blue }
             if arguments.contains("--writing") { model.panel = .writing }
             if arguments.contains("--library") { model.showLibrary = true }

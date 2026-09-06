@@ -11,7 +11,7 @@ enum VerificationFailure: Error { case failed(String) }
     static func voiceEditing(directory: URL) async throws {
         let model = StudioModel(inMemory: true)
         model.document.text = "Dear Alex. The quiet sea was beautiful."
-        for name in ["replace", "insert", "font", "undo"] {
+        for name in ["replace", "insert", "font", "undo", "tender", "ink"] {
             await model.toggleCommand(audioFileURL: directory.appendingPathComponent(name + ".aiff"))
             let deadline = Date().addingTimeInterval(30)
             while model.speech.state != .idle && Date() < deadline { try await Task.sleep(for: .milliseconds(30)) }
@@ -21,6 +21,8 @@ enum VerificationFailure: Error { case failed(String) }
             case "replace": try check(model.document.text.contains("calm sea"), "spoken replacement: \(model.commandInput)")
             case "insert": try check(model.document.text.contains("calm blue sea"), "spoken insertion: \(model.commandInput)")
             case "font": try check(model.document.handwriting == .baskerville, "spoken font: \(model.commandInput)")
+            case "tender": try check(model.document.expression == .tender, "spoken expression: \(model.commandInput)")
+            case "ink": try check(model.document.ink == .oxblood, "spoken ink: \(model.commandInput)")
             default: try check(model.document.handwriting == .aurore, "spoken undo: \(model.commandInput)")
             }
             print("PASS: spoken edit — \(model.commandInput) → \(model.commandFeedback)")
@@ -62,6 +64,29 @@ enum VerificationFailure: Error { case failed(String) }
         await editor.newLetter()
         try check(!editor.canUndo && !editor.canRedo && editor.commandInput.isEmpty, "new letter inherited edit history")
         print("PASS: voice editing, font selection, multi-step undo/redo, feedback, history isolation")
+        let expressive = StudioModel(inMemory: true)
+        let original = expressive.document
+        await expressive.applyVoiceEdit("Less formal")
+        try check(expressive.document.handwriting == .caveat && expressive.layout.document.expression == .familiar, "expression did not reach renderer")
+        await expressive.applyVoiceEdit("Use oxblood")
+        expressive.fontSizeDrag(true)
+        expressive.chooseResonance(0.2)
+        expressive.chooseResonance(1)
+        expressive.fontSizeDrag(false)
+        try check(expressive.document.text == original.text, "expression changed the author's words")
+        await expressive.undoText()
+        try check(expressive.document.resonance == nil, "resonance drag did not undo as one change")
+        await expressive.undoText()
+        try check(expressive.document.ink == original.ink, "ink undo failed")
+        await expressive.undoText()
+        try check(expressive.document == original, "expression undo did not restore the complete letter")
+        await expressive.redoText()
+        try check(expressive.document.expression == .familiar, "expression redo failed")
+        expressive.resetExpression()
+        try check(expressive.layout.document.expression == nil, "reset left stale layout")
+        await expressive.applyVoiceEdit("Send to the writing desk")
+        try check(expressive.showPrint, "writing desk did not open review")
+        print("PASS: expression and ink commands, grouped resonance undo, reset, renderer synchronization, print review")
         let animation = StudioModel(inMemory: true)
         animation.document.text = ""
         animation.receiveDictation("dear Alex, I remember the afternoon by the water.")

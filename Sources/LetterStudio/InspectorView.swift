@@ -130,6 +130,21 @@ struct InspectorView: View {
 
     private var materialsPanel: some View {
         Group {
+            ExpressionPanel(model: model)
+            Divider()
+            VStack(alignment: .leading, spacing: 14) {
+                SmallLabel(text: "Ink").foregroundStyle(Palette.muted)
+                Text(model.document.ink.name).font(.custom("Baskerville", size: 19)).foregroundStyle(Palette.text)
+                HStack(spacing: 12) {
+                    ForEach(Ink.allCases, id: \.self) { ink in
+                        Button { model.chooseInk(ink) } label: {
+                            Circle().fill(Color(hex: ink.hex)).frame(width: 24, height: 24)
+                                .padding(4).overlay(Circle().stroke(model.document.ink == ink ? Palette.text : .clear, lineWidth: 1))
+                        }.buttonStyle(.plain).help(ink.name).accessibilityLabel(ink.name).accessibilityAddTraits(model.document.ink == ink ? .isSelected : [])
+                    }
+                }
+            }
+            DisclosureGroup("Lettering & size") {
             VStack(alignment: .leading, spacing: 14) {
                 SmallLabel(text: "Lettering").foregroundStyle(Palette.muted)
                 Text(model.document.handwriting.name).font(.custom(model.document.handwriting.fontName, size: 28)).foregroundStyle(Palette.text)
@@ -147,17 +162,7 @@ struct InspectorView: View {
                 }
                 Slider(value: Binding(get: { model.document.fontSize }, set: { model.chooseFontSize($0) }), in: 18...32, step: 1, onEditingChanged: { model.fontSizeDrag($0) }).tint(Palette.text).accessibilityLabel("Handwriting size")
             }
-            VStack(alignment: .leading, spacing: 14) {
-                SmallLabel(text: "Ink").foregroundStyle(Palette.muted)
-                HStack(spacing: 16) {
-                    ForEach(Ink.allCases, id: \.self) { ink in
-                        Button { model.document.ink = ink } label: {
-                            Circle().fill(Color(hex: ink.hex)).frame(width: 24, height: 24)
-                                .padding(4).overlay(Circle().stroke(model.document.ink == ink ? Palette.text : .clear, lineWidth: 1))
-                        }.buttonStyle(.plain).help(ink.rawValue.capitalized).accessibilityLabel("\(ink.rawValue) ink")
-                    }
-                }
-            }
+            }.font(.system(size: 11)).tint(Palette.text)
             VStack(alignment: .leading, spacing: 14) {
                 SmallLabel(text: "Paper").foregroundStyle(Palette.muted)
                 HStack(spacing: 12) {

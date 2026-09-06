@@ -69,6 +69,16 @@ import LetterCore
         try await Task.sleep(for: .milliseconds(250))
         try await click(470, 370, window: window)
         try AppVerification.check(!model.showLibrary, "Archive row didn't reopen letter")
+        try await click(1240, 198, window: window)
+        try AppVerification.check(model.panel == .materials, "Expression tab did not open")
+        try await click(1245, 449, window: window)
+        try AppVerification.check(model.document.expression == .familiar && model.document.handwriting == .caveat, "Expression row did not apply its hand")
+        try await click(1270, 608, window: window)
+        try AppVerification.check(model.document.effectiveResonance > 0.7, "Resonance control did not update")
+        try capture("interaction-expression", window: window)
+        try await click(1305, 663, window: window)
+        try AppVerification.check(model.document.expression == nil, "Expression reset did not respond")
+        print("PASS: native expression selection, resonance control, and reset")
         print("PASS: native mouse/text interaction — font selection, specimen editing, archive search and reopen")
     }
 }

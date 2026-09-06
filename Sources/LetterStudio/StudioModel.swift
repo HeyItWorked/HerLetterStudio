@@ -9,6 +9,7 @@ import LetterCore
     var document: LetterDocument {
         didSet {
             if document.text != oldValue.text || document.handwriting != oldValue.handwriting ||
+                document.expression != oldValue.expression || document.resonance != oldValue.resonance ||
                 document.fontSize != oldValue.fontSize || document.ink != oldValue.ink || document.paper != oldValue.paper || document.stationery != oldValue.stationery || document.title != oldValue.title {
                 layout = LetterLayout(document: document)
             }
@@ -39,17 +40,20 @@ import LetterCore
         var text: String
         var font: Handwriting
         var size: Double
+        var expression: HandExpression?
+        var resonance: Double?
+        var ink: Ink
     }
     private var undoStack: [Revision] = []
     private var redoStack: [Revision] = []
     private var resizingFont = false
-    private var revision: Revision { Revision(text: document.text, font: document.handwriting, size: document.fontSize) }
+    private var revision: Revision { Revision(text: document.text, font: document.handwriting, size: document.fontSize, expression: document.expression, resonance: document.resonance, ink: document.ink) }
     private var saveTask: Task<Void, Never>?
     private var replayTask: Task<Void, Never>?
     private var inkTask: Task<Void, Never>?
     private let storage: URL?
     private let speaker = AVSpeechSynthesizer()
-    enum Panel: String, CaseIterable { case context = "Context", writing = "Writing", materials = "Materials", voice = "Voice Edit" }
+    enum Panel: String, CaseIterable { case context = "Context", writing = "Writing", materials = "Expression", voice = "Voice Edit" }
 
     init(inMemory: Bool = false, storageURL: URL? = nil) {
         FontLibrary.register()
@@ -191,6 +195,9 @@ import LetterCore
         case .redo: let available = canRedo; await redoText(); commandFeedback = available ? "Restored the change." : "Nothing to redo yet."; return
         case .readBack: await readBack(); commandFeedback = "Reading your letter."; return
         case .printPreview: showPrint = true; commandFeedback = "Ready to review for print."; return
+        case let .expression(style): chooseExpression(style); commandFeedback = "The hand is now \(style.name.lowercased()). Your words are unchanged."; return
+        case let .ink(ink): chooseInk(ink); commandFeedback = "Ink changed to \(ink.name)."; return
+        case let .resonance(value): chooseResonance(value); commandFeedback = "Expression is now \(value == 0 ? "restrained" : "expansive")."; return
         case let .font(style): chooseFont(style); commandFeedback = "Font changed to \(style.name)."; return
         case let .size(size): chooseFontSize(size)
         case .larger: chooseFontSize(document.fontSize + 2)
@@ -209,6 +216,41 @@ import LetterCore
         lastEditBefore = before
         lastEditAfter = document.text
         commandFeedback = "Applied: \(input)"
+    }
+
+    func chooseExpression(_ expression: HandExpression) {
+        guard document.expression != expression || document.handwriting != expression.font else { return }
+        rememberRevision()
+        var updated = document
+        updated.expression = expression
+        updated.handwriting = expression.font
+        document = updated
+    }
+
+    func chooseInk(_ ink: Ink) {
+        guard document.ink != ink else { return }
+        rememberRevision()
+        document.ink = ink
+    }
+
+    func chooseResonance(_ value: Double) {
+        guard value.isFinite else { return }
+        let value = min(1, max(0, value))
+        guard document.resonance != value || document.expression == nil else { return }
+        if !resizingFont { rememberRevision() }
+        var updated = document
+        updated.expression = updated.expression ?? .tender
+        updated.resonance = value
+        document = updated
+    }
+
+    func resetExpression() {
+        guard document.expression != nil else { return }
+        rememberRevision()
+        var updated = document
+        updated.expression = nil
+        updated.resonance = nil
+        document = updated
     }
 
     func fontSizeDrag(_ editing: Bool) {
@@ -248,6 +290,9 @@ import LetterCore
         document.text = state.text
         document.handwriting = state.font
         document.fontSize = state.size
+        document.expression = state.expression
+        document.resonance = state.resonance
+        document.ink = state.ink
     }
 
     func updateTypedText(_ text: String) {
@@ -281,7 +326,7 @@ import LetterCore
                 let target = Double(self.document.text.utf16.count)
                 let position = self.visibleCharacters ?? target
                 let speed = min(120.0, max(32.0, (target - position) * 2.5))
-                self.visibleCharacters = min(target, position + elapsed * speed)
+                self.visibleCharacters = min(target, position + elapsed * speed * self.document.revealPace)
                 if self.visibleCharacters == target { break }
             }
             self?.visibleCharacters = nil
@@ -338,7 +383,7 @@ import LetterCore
             while position < total {
                 do { try await Task.sleep(for: .milliseconds(8)) } catch { return }
                 let now = ProcessInfo.processInfo.systemUptime
-                position = min(total, position + min(0.05, now - last) * 42)
+                position = min(total, position + min(0.05, now - last) * 42 * (self?.document.revealPace ?? 1))
                 last = now
                 self?.visibleCharacters = position
             }

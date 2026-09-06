@@ -28,7 +28,10 @@ public enum VoiceCommand: Equatable, Sendable {
         default: break
         }
         for ink in Ink.allCases {
-            if ["use \(ink.rawValue)", "use \(ink.name.lowercased())", "use \(ink.rawValue) ink"].contains(command.lowercased()) { return .ink(ink) }
+            let names = [ink.rawValue, ink.name.lowercased()] + (ink == .oxblood ? ["ox blood", "ox blood sincerity"] : [])
+            for name in names {
+                if ["use \(name)", "use \(name) ink", "change ink to \(name)", "change it to \(name)"].contains(command.lowercased()) { return .ink(ink) }
+            }
         }
         for style in Handwriting.allCases {
             let aliases = [style.name.lowercased(), style.rawValue.lowercased()]
