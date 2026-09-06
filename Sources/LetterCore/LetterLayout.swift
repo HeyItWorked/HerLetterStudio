@@ -1,0 +1,108 @@
+import AppKit
+import CoreText
+
+public enum FontLibrary {
+    public static func register() {
+        guard let directory = Bundle.module.url(forResource: "Fonts", withExtension: nil),
+              let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return }
+        for file in files where file.pathExtension == "ttf" {
+            CTFontManagerRegisterFontsForURL(file as CFURL, .process, nil)
+        }
+    }
+}
+
+public extension NSColor {
+    convenience init(rgb: UInt32) {
+        self.init(srgbRed: Double((rgb >> 16) & 255) / 255,
+                  green: Double((rgb >> 8) & 255) / 255,
+                  blue: Double(rgb & 255) / 255, alpha: 1)
+    }
+}
+
+@MainActor public final class LetterLayout {
+    public struct Page {
+        public let frame: CTFrame
+        public let range: NSRange
+    }
+    public let document: LetterDocument
+    public let size: CGSize
+    public let pages: [Page]
+    public let attributedText: NSAttributedString
+
+    public init(document: LetterDocument) {
+        self.document = document
+        size = CGSize(width: document.paper.width, height: document.paper.height)
+        let paragraph = NSMutableParagraphStyle()
+        let fontSize = min(34, max(18, document.fontSize))
+        paragraph.minimumLineHeight = fontSize * 1.5
+        paragraph.maximumLineHeight = fontSize * 1.5
+        paragraph.lineBreakMode = .byWordWrapping
+        let font = NSFont(name: document.handwriting.fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
+        attributedText = NSAttributedString(string: document.text, attributes: [
+            .font: font, .foregroundColor: NSColor(rgb: document.ink.hex),
+            .paragraphStyle: paragraph, .ligature: 1
+        ])
+        let framesetter = CTFramesetterCreateWithAttributedString(attributedText)
+        let rect = CGRect(x: 66, y: 58, width: size.width - 132, height: size.height - 122)
+        let path = CGPath(rect: rect, transform: nil)
+        var result: [Page] = []
+        var offset = 0
+        repeat {
+            let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: offset, length: 0), path, nil)
+            let visible = CTFrameGetVisibleStringRange(frame)
+            result.append(Page(frame: frame, range: NSRange(location: offset, length: visible.length)))
+            guard visible.length > 0 else { break }
+            offset += visible.length
+        } while offset < attributedText.length
+        pages = result
+    }
+
+    /// Draws ink in physical page points, with the origin at the bottom left.
+    /// Both screen and PDF use this exact function; UI paper effects never enter print output.
+    public func draw(page index: Int, in context: CGContext, visibleUTF16: Int? = nil) {
+        guard pages.indices.contains(index) else { return }
+        context.saveGState()
+        context.textMatrix = .identity
+        let frame = pages[index].frame
+        let lines = CTFrameGetLines(frame) as! [CTLine]
+        var origins = Array(repeating: CGPoint.zero, count: lines.count)
+        CTFrameGetLineOrigins(frame, CFRange(location: 0, length: 0), &origins)
+        let frameOrigin = CTFrameGetPath(frame).boundingBox.origin
+        for (i, line) in lines.enumerated() {
+            let range = CTLineGetStringRange(line)
+            if let visibleUTF16, range.location >= visibleUTF16 { continue }
+            let x = frameOrigin.x + origins[i].x
+            let y = frameOrigin.y + origins[i].y
+            context.saveGState()
+            if let visibleUTF16, visibleUTF16 < range.location + range.length {
+                let advance = CTLineGetOffsetForStringIndex(line, visibleUTF16, nil)
+                context.clip(to: CGRect(x: x - 8, y: y - 30, width: max(0, advance + 8), height: 90))
+            }
+            context.textPosition = CGPoint(x: x, y: y)
+            CTLineDraw(line, context)
+            context.restoreGState()
+        }
+        context.restoreGState()
+    }
+
+    public func pdfData(includePaperColor: Bool = false) -> Data {
+        let data = NSMutableData()
+        var bounds = CGRect(origin: .zero, size: size)
+        guard let consumer = CGDataConsumer(data: data),
+              let context = CGContext(consumer: consumer, mediaBox: &bounds, [
+                kCGPDFContextTitle: document.title,
+                kCGPDFContextCreator: "Letter Studio"
+              ] as CFDictionary) else { return Data() }
+        for index in pages.indices {
+            context.beginPDFPage(nil)
+            if includePaperColor {
+                context.setFillColor(NSColor(rgb: document.stationery.hex).cgColor)
+                context.fill(bounds)
+            }
+            draw(page: index, in: context)
+            context.endPDFPage()
+        }
+        context.closePDF()
+        return data as Data
+    }
+}
