@@ -20,8 +20,33 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try rejectsFutureSchema()
         try commandsRequireExplicitUnambiguousInput()
         try expandedVoiceEditing()
+        try expressionPreservesDocumentsAndPrint()
         try bundledFontsResolve()
         print("PASS: 9 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, expanded edits, fonts)")
+    }
+    @MainActor static func expressionPreservesDocumentsAndPrint() throws {
+        let original = LetterDocument.example
+        var legacy = try JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as! [String: Any]
+        legacy.removeValue(forKey: "expression")
+        legacy.removeValue(forKey: "resonance")
+        let restored = try JSONDecoder().decode(LetterDocument.self, from: JSONSerialization.data(withJSONObject: legacy))
+        try expect(restored.expression == nil, "legacy letters must retain their original layout")
+        for expression in HandExpression.allCases {
+            var letter = original
+            letter.expression = expression
+            letter.handwriting = expression.font
+            letter.resonance = 1
+            letter.text = String(repeating: original.text + "\n\n", count: 5)
+            let saved = try JSONDecoder().decode(LetterDocument.self, from: JSONEncoder().encode(letter))
+            try expect(saved == letter, "expression lost on reopen")
+            let layout = LetterLayout(document: letter)
+            let pdf = PDFDocument(data: layout.pdfData())
+            try expect(pdf?.string?.filter { !$0.isWhitespace } == letter.text.filter { !$0.isWhitespace }, "expression loses printed words")
+        }
+        try expect(VoiceCommand.parse("A little more tender.") == .expression(.tender), "tender voice instruction")
+        try expect(VoiceCommand.parse("Less formal") == .expression(.familiar), "familiar voice instruction")
+        try expect(VoiceCommand.parse("Use oxblood") == .ink(.oxblood), "ink voice instruction")
+        try expect(VoiceCommand.parse("Send to the writing desk") == .printPreview, "writing desk must open preview")
     }
     static func speechHypothesesReplaceRatherThanDuplicate() throws {
         let base = "Dear friend,\n\n"

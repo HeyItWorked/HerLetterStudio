@@ -3,12 +3,19 @@ import Foundation
 public enum VoiceCommand: Equatable, Sendable {
     case paragraph, undo, redo, readBack, printPreview, replace(String, String)
     case delete(String), insert(String, String, before: Bool), lastSentence, lastParagraph
+    case expression(HandExpression), ink(Ink), resonance(Double)
     case font(Handwriting), size(Double), larger, smaller
 
     public static func parse(_ input: String) -> VoiceCommand? {
         let command = input.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: ".!?"))
         switch command.lowercased() {
+        case "a little more tender", "more tender", "make it tender": return .expression(.tender)
+        case "less formal", "more familiar": return .expression(.familiar)
+        case "more reflective", "more wistful": return .expression(.reflective)
+        case "more restrained": return .resonance(0)
+        case "more expressive": return .resonance(1)
+        case "send to the writing desk": return .printPreview
         case "new paragraph", "start a new paragraph": return .paragraph
         case "undo", "undo that", "undo the last change", "undo last change": return .undo
         case "redo", "redo that", "redo the last change": return .redo
@@ -19,6 +26,9 @@ public enum VoiceCommand: Equatable, Sendable {
         case "read back", "read it back", "read the letter": return .readBack
         case "print", "print the letter", "print preview": return .printPreview
         default: break
+        }
+        for ink in Ink.allCases {
+            if ["use \(ink.rawValue)", "use \(ink.name.lowercased())", "use \(ink.rawValue) ink"].contains(command.lowercased()) { return .ink(ink) }
         }
         for style in Handwriting.allCases {
             let aliases = [style.name.lowercased(), style.rawValue.lowercased()]

@@ -22,9 +22,42 @@ public enum Stationery: String, Codable, CaseIterable, Sendable {
 }
 
 public enum Ink: String, Codable, CaseIterable, Sendable {
-    case indigo, graphite, sepia
+    case indigo, graphite, sepia, midnight, oxblood
     public var hex: UInt32 {
-        switch self { case .indigo: 0x344D75; case .graphite: 0x343D3C; case .sepia: 0x755348 }
+        switch self { case .indigo: 0x344D75; case .graphite: 0x343D3C; case .sepia: 0x755348; case .midnight: 0x252B39; case .oxblood: 0x783C46 }
+    }
+}
+
+public enum HandExpression: String, Codable, CaseIterable, Sendable {
+    case tender, familiar, reflective
+    public var name: String { rawValue.capitalized }
+    public var font: Handwriting {
+        switch self { case .tender: .aurore; case .familiar: .caveat; case .reflective: .personal }
+    }
+    public var description: String {
+        switch self {
+        case .tender: "Flowing lines, a little room to breathe."
+        case .familiar: "Open, easy, as though you were here."
+        case .reflective: "Unhurried words. Space for a memory."
+        }
+    }
+    public var lineHeight: Double {
+        switch self { case .tender: 1.58; case .familiar: 1.48; case .reflective: 1.68 }
+    }
+    public var pace: Double {
+        switch self { case .tender: 0.85; case .familiar: 1.1; case .reflective: 0.7 }
+    }
+}
+
+public extension Ink {
+    var name: String {
+        switch self {
+        case .indigo: "Cedar Blue-Black"
+        case .graphite: "Lampblack Tenderness"
+        case .sepia: "Sepia Heart"
+        case .midnight: "Midnight Iron-Gall"
+        case .oxblood: "Oxblood Sincerity"
+        }
     }
 }
 
@@ -52,6 +85,17 @@ public struct LetterDocument: Codable, Identifiable, Equatable, Sendable {
     public var text = ""
     public var handwriting: Handwriting = .aurore
     public var fontSize: Double = 24
+    // Optional fields preserve decoding and appearance of pre-expression letters.
+    public var expression: HandExpression?
+    public var resonance: Double?
+    public var effectiveResonance: Double {
+        guard let resonance, resonance.isFinite else { return 0.5 }
+        return min(1, max(0, resonance))
+    }
+    public var revealPace: Double {
+        guard let expression else { return 1 }
+        return expression.pace * (1.15 - effectiveResonance * 0.3)
+    }
     public var stationery: Stationery = .ivory
     public var ink: Ink = .indigo
     public var paper: Paper = .letter

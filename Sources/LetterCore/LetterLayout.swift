@@ -34,13 +34,16 @@ public extension NSColor {
         size = CGSize(width: document.paper.width, height: document.paper.height)
         let paragraph = NSMutableParagraphStyle()
         let fontSize = min(34, max(18, document.fontSize))
-        paragraph.minimumLineHeight = fontSize * 1.5
-        paragraph.maximumLineHeight = fontSize * 1.5
+        let resonance = document.effectiveResonance
+        let lineHeight = document.expression.map { $0.lineHeight + (resonance - 0.5) * 0.18 } ?? 1.5
+        paragraph.minimumLineHeight = fontSize * lineHeight
+        paragraph.maximumLineHeight = fontSize * lineHeight
         paragraph.lineBreakMode = .byWordWrapping
         let font = NSFont(name: document.handwriting.fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
         attributedText = NSAttributedString(string: document.text, attributes: [
             .font: font, .foregroundColor: NSColor(rgb: document.ink.hex),
-            .paragraphStyle: paragraph, .ligature: 1
+            .paragraphStyle: paragraph, .ligature: 1,
+            .kern: document.expression == nil ? 0 : fontSize * resonance * 0.025
         ])
         let framesetter = CTFramesetterCreateWithAttributedString(attributedText)
         let rect = CGRect(x: 66, y: 58, width: size.width - 132, height: size.height - 122)
