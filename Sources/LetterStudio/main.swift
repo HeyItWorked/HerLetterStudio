@@ -78,6 +78,8 @@ import LetterCore
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
             if arguments.contains("--focus") { model.focusMode = true }
             if arguments.contains("--preparing") { model.speech.state = .preparing; model.speech.status = "Preparing on-device dictation…" }
+            if let index = arguments.firstIndex(of: "--font"), arguments.count > index + 1,
+               let font = Handwriting(rawValue: arguments[index + 1]) { model.chooseFont(font) }
             if arguments.contains("--fonts") { model.showFonts = true }
             if arguments.contains("--voice-edit") { model.panel = .voice }
             if arguments.contains("--expression") { model.panel = .materials; model.chooseExpression(.tender); model.chooseInk(.oxblood) }

@@ -1,15 +1,16 @@
 import Foundation
 
 public enum Handwriting: String, Codable, CaseIterable, Sendable {
-    case aurore, caveat, personal, baskerville, georgia, palatino, typewriter
+    case aurore, caveat, personal, baskerville, georgia, palatino, typewriter, badscript, reenie, sacramento, parisienne
+    public static var galleryOrder: [Handwriting] { [.badscript, .reenie, .sacramento, .parisienne] + allCases.filter { ![.badscript, .reenie, .sacramento, .parisienne].contains($0) } }
     public var name: String {
-        switch self { case .aurore: "Aurore"; case .caveat: "Everyday"; case .personal: "Daydream"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino"; case .typewriter: "Typewriter" }
+        switch self { case .aurore: "Aurore"; case .caveat: "Everyday"; case .personal: "Daydream"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino"; case .typewriter: "Typewriter"; case .badscript: "Bad Script"; case .reenie: "Reenie Beanie"; case .sacramento: "Sacramento"; case .parisienne: "Parisienne" }
     }
     public var fontName: String {
-        switch self { case .aurore: "LaBelleAurore"; case .caveat: "Caveat-Regular"; case .personal: "NothingYouCouldDo"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino-Roman"; case .typewriter: "AmericanTypewriter" }
+        switch self { case .aurore: "LaBelleAurore"; case .caveat: "Caveat-Regular"; case .personal: "NothingYouCouldDo"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino-Roman"; case .typewriter: "AmericanTypewriter"; case .badscript: "BadScript-Regular"; case .reenie: "ReenieBeanie"; case .sacramento: "Sacramento-Regular"; case .parisienne: "Parisienne-Regular" }
     }
     public var subtitle: String {
-        switch self { case .aurore: "Flowing & intimate"; case .caveat: "Easy & familiar"; case .personal: "Open & unhurried"; case .baskerville: "Elegant correspondence"; case .georgia: "Warm & readable"; case .palatino: "Classic & literary"; case .typewriter: "A personal dispatch" }
+        switch self { case .aurore: "Flowing & intimate"; case .caveat: "Easy & familiar"; case .personal: "Open & unhurried"; case .baskerville: "Elegant correspondence"; case .georgia: "Warm & readable"; case .palatino: "Classic & literary"; case .typewriter: "A personal dispatch"; case .badscript: "Slanted & thoughtful"; case .reenie: "Loose & spontaneous"; case .sacramento: "Fine loops & quiet grace"; case .parisienne: "Flourished & romantic" }
     }
 }
 

@@ -149,7 +149,7 @@ struct InspectorView: View {
                 SmallLabel(text: "Lettering").foregroundStyle(Palette.muted)
                 Text(model.document.handwriting.name).font(.custom(model.document.handwriting.fontName, size: 28)).foregroundStyle(Palette.text)
                 Text(model.document.handwriting.subtitle).font(.system(size: 11)).foregroundStyle(Palette.muted)
-                Button("Browse 7 fonts", systemImage: "textformat") {
+                Button("Browse \(Handwriting.allCases.count) fonts", systemImage: "textformat") {
                     Task { await model.stopInput(); model.showFonts = true }
                 }.buttonStyle(.bordered).tint(Palette.text)
             }

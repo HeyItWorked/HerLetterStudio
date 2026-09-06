@@ -12,7 +12,9 @@ struct FontGallery: View {
             VStack(alignment: .leading, spacing: 0) {
                 SmallLabel(text: "The type collection").foregroundStyle(Palette.muted)
                 Text("A voice\non paper.").font(.custom("Baskerville", size: 35)).lineSpacing(-2).padding(.top, 16).padding(.bottom, 28)
-                ForEach(Array(Handwriting.allCases.enumerated()), id: \.element) { index, style in
+                ScrollView {
+                VStack(spacing: 0) {
+                ForEach(Array(Handwriting.galleryOrder.enumerated()), id: \.element) { index, style in
                     Button { model.chooseFont(style) } label: {
                         HStack(spacing: 12) {
                             Text(String(format: "%02d", index + 1)).font(.system(size: 9, design: .monospaced))
@@ -27,8 +29,10 @@ struct FontGallery: View {
                     }.buttonStyle(.plain).accessibilityLabel("Choose \(style.name)")
                         .accessibilityAddTraits(model.document.handwriting == style ? .isSelected : [])
                 }
+                }
+                }.scrollIndicators(.visible)
                 Spacer(minLength: 18)
-                Text("Seven ways to make\nyourself heard.").font(.custom("Baskerville-Italic", size: 16)).foregroundStyle(Palette.muted)
+                Text("\(Handwriting.allCases.count) ways to make\nyourself heard.").font(.custom("Baskerville-Italic", size: 16)).foregroundStyle(Palette.muted)
             }.padding(30).frame(width: 258).frame(maxHeight: .infinity).background(Color(hex: 0xE5E1D3))
             VStack(alignment: .leading, spacing: 0) {
                 HStack {

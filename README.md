@@ -16,7 +16,7 @@ To try the writing animation without speaking, open any populated letter and cli
 
 Drafts autosave locally under `~/Library/Application Support/Letter Studio`. The Letters view reopens drafts; the File menu imports/exports portable `.letter` files including references. Failed saves keep the current document open for recovery.
 
-The seven lettering styles include three bundled, licensed handwriting fonts (La Belle Aurore, Caveat, Nothing You Could Do), plus the Mac’s Baskerville, Georgia, Palatino, and American Typewriter. It is not a learned copy of your handwriting. Screen and PDF share the same Core Text page layout; exported text stays selectable. References and UI decorations are not printed.
+The eleven lettering styles include seven bundled, licensed handwriting fonts (La Belle Aurore, Caveat, Nothing You Could Do, Bad Script, Reenie Beanie, Sacramento, Parisienne), plus the Mac’s Baskerville, Georgia, Palatino, and American Typewriter. It is not a learned copy of your handwriting. Screen and PDF share the same Core Text page layout; exported text stays selectable. References and UI decorations are not printed.
 
 ## Build and verify
 
@@ -61,7 +61,7 @@ Phrase edits require exactly one matching phrase; ambiguous edits leave the text
 
 ## Design and interaction checks
 
-The correspondence desk uses a fixed dictation bar, an ivory reference folio, a seven-style specimen book, and a row-based archive. Focus hides the folio. Hover/press feedback and spatial transitions respect Reduce Motion. See `DESIGN.md` for the visual thesis and review decisions.
+The correspondence desk uses a fixed dictation bar, an ivory reference folio, an eleven-style specimen book, and a row-based archive. Focus hides the folio. Hover/press feedback and spatial transitions respect Reduce Motion. See `DESIGN.md` for the visual thesis and review decisions.
 
 The optional `interaction` verifier clicks and types in an isolated native window. It checks font selection across a row, editing the specimen, opening/searching/reopening the archive, and saves screenshots of the typed specimen and empty search results. It is a fixed-window mouse/text smoke test, not a complete keyboard or VoiceOver audit. It does not open your saved drafts or request the microphone.
 
@@ -70,3 +70,5 @@ The optional `interaction` verifier clicks and types in an isolated native windo
 Open **Expression**, choose a hand, adjust **Resonance**, and click **Watch the ink**. Scroll down for the five inks and paper. Voice Edit accepts “a little more tender”, “less formal”, “more reflective”, “more restrained”, “more expressive”, and “change ink to oxblood sincerity”. These change presentation, not wording. “Send to the writing desk” opens print review.
 
 Expression settings are saved with each letter and support undo/redo. Reset removes expression spacing/pacing while keeping your font and ink. This remains font-based rendering: it does not synthesize real pen strokes, infer emotion, or control a calligraphy robot. See [the feasibility map](LONGHAND.md) for the narrative's software, research, and hardware boundaries.
+
+The four new internet-sourced hands appear first in Fonts. Try Bad Script for a personal letter, Reenie Beanie for a spontaneous note, Sacramento for fine cursive, or Parisienne for a romantic flourish. Scroll the collection for the original styles. Font provenance and checksums are in `Sources/LetterCore/Resources/Fonts/SOURCES.md`.
