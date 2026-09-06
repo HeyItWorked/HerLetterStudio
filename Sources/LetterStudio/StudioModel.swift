@@ -26,7 +26,7 @@ import LetterCore
     var saveStatus = "Saved on this Mac"
     var focusMode = false
     var isReplaying = false
-    var visibleCharacters: Int?
+    var visibleCharacters: Double?
     var commandMode = false
     var commandTranscript = ""
     let speech = SpeechController()
@@ -133,6 +133,7 @@ import LetterCore
         speaker.stopSpeaking(at: .immediate)
         await speech.stop()
         inkTask?.cancel()
+        inkTask = nil
         visibleCharacters = nil
     }
 
@@ -177,26 +178,35 @@ import LetterCore
         }
     }
 
-    private func receiveDictation(_ text: String) {
-        let previous = document.text
-        let oldVisible = visibleCharacters ?? previous.utf16.count
+    func receiveDictation(_ text: String) {
+        guard text != document.text else { return }
+        let previousCount = Double(document.text.utf16.count)
+        let position = visibleCharacters ?? previousCount
         document.text = text
-        inkTask?.cancel()
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            inkTask?.cancel(); inkTask = nil
             visibleCharacters = nil; return
         }
-        let common = zip(previous.utf16, text.utf16).prefix { $0 == $1 }.count
-        let start = min(oldVisible, common)
-        let target = text.utf16.count
-        visibleCharacters = start
+        // Speech often revises capitalization/punctuation at the start of a phrase.
+        // Keep the pen's progress instead of erasing back to the first changed character.
+        visibleCharacters = min(position, Double(text.utf16.count))
+        guard inkTask == nil else { return }
         inkTask = Task { [weak self] in
-            var position = start
-            while position < target {
-                do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
-                position = min(target, position + 3)
-                self?.visibleCharacters = position
+            var last = ProcessInfo.processInfo.systemUptime
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .milliseconds(8)) } catch { return }
+                guard let self else { return }
+                let now = ProcessInfo.processInfo.systemUptime
+                let elapsed = min(0.05, now - last)
+                last = now
+                let target = Double(self.document.text.utf16.count)
+                let position = self.visibleCharacters ?? target
+                let speed = min(120.0, max(32.0, (target - position) * 2.5))
+                self.visibleCharacters = min(target, position + elapsed * speed)
+                if self.visibleCharacters == target { break }
             }
             self?.visibleCharacters = nil
+            self?.inkTask = nil
         }
     }
 
@@ -225,11 +235,19 @@ import LetterCore
         guard !document.text.isEmpty else { return }
         visibleCharacters = 0
         isReplaying = true
-        let total = document.text.utf16.count
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            visibleCharacters = nil; isReplaying = false; return
+        }
+        let total = Double(document.text.utf16.count)
         replayTask = Task { [weak self] in
-            for count in stride(from: 0, through: total + 2, by: 2) {
-                do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
-                self?.visibleCharacters = min(count, total)
+            var last = ProcessInfo.processInfo.systemUptime
+            var position = 0.0
+            while position < total {
+                do { try await Task.sleep(for: .milliseconds(8)) } catch { return }
+                let now = ProcessInfo.processInfo.systemUptime
+                position = min(total, position + min(0.05, now - last) * 42)
+                last = now
+                self?.visibleCharacters = position
             }
             self?.visibleCharacters = nil
             self?.isReplaying = false

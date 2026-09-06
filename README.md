@@ -12,6 +12,8 @@ Requires macOS 26. The built app is at `build/Letter Studio.app`.
 4. Use Command for a separate spoken command, then finish it: “new paragraph”, “undo that”, “read it back”, “replace afternoon with morning”, or “print preview”. Replacements require exactly one matching phrase. Ordinary dictation is treated as letter text.
 5. Open Print to review every page, save a PDF, or choose a printer in the native Mac panel. Enable paper color to print the stationery tint; leave it off when using colored paper.
 
+To try the writing animation without speaking, open any populated letter and click the small play triangle beside Command. This replays the ink reveal without changing your words.
+
 Drafts autosave locally under `~/Library/Application Support/Letter Studio`. The Letters view reopens drafts; the File menu imports/exports portable `.letter` files including references. Failed saves keep the current document open for recovery.
 
 The handwriting is rendered with three bundled, licensed fonts: La Belle Aurore, Caveat, and Nothing You Could Do. It is not a learned copy of your handwriting. Screen and PDF share the same Core Text page layout; exported text stays selectable. References and UI decorations are not printed.
@@ -34,3 +36,7 @@ Checks cover pagination and exact PDF text across all styles/paper sizes, docume
 A physical printer was not configured during development. PDF dimensions and the native print-preview path were checked; paper output and your own spoken dictation accuracy still need a hands-on trial. No cloud account or paid API is required.
 
 See `research/FINDINGS.md` for film references and sources. Font licenses ship beside the bundled fonts in `Sources/LetterCore/Resources/Fonts`.
+
+## Transition QA
+
+`bash scripts/verify-app.sh transition transition-scripted` drives the visible workspace with repeatable partial transcripts, including a capitalization correction and line wrapping. To use recorded speech instead, append an absolute audio-file path. These runs use an in-memory draft and never request microphone access. Frames, cursor samples, and the final transcript are saved under `build/`. Screen capture affects timing, so the CSV is a continuity diagnostic, not a frame-rate benchmark.

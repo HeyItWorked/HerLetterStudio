@@ -9,6 +9,27 @@ enum VerificationFailure: Error { case failed(String) }
     }
 
     static func run() async throws {
+        let animation = StudioModel(inMemory: true)
+        animation.document.text = ""
+        animation.receiveDictation("dear Alex, I remember the afternoon by the water.")
+        try await Task.sleep(for: .milliseconds(120))
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            let before = animation.visibleCharacters ?? 0
+            try check(before > 0 && before < 47, "ink did not reveal progressively")
+            animation.receiveDictation("Dear Alex, I remember the afternoon by the water.")
+            try check(animation.visibleCharacters == before, "capitalization correction rewound visible ink")
+            animation.receiveDictation("Dear Alex, I remember the afternoon by the water. The light was warm.")
+            try check(animation.visibleCharacters == before, "new hypothesis reset the reveal")
+            try await Task.sleep(for: .milliseconds(25))
+            let later = animation.visibleCharacters ?? 0
+            try check(later > before && later != later.rounded(), "ink position is not continuous")
+        }
+        await animation.stopInput()
+        animation.document.text = "A different draft."
+        try await Task.sleep(for: .milliseconds(30))
+        try check(animation.visibleCharacters == nil, "cancelled ink task affected the next draft")
+        print("PASS: continuous ink, correction continuity, append continuity, cancellation")
+
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("letter-check-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
         let directory = root.appendingPathComponent("library")

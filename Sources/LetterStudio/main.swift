@@ -32,7 +32,8 @@ import LetterCore
             return
         }
         let snapshotIndex = arguments.firstIndex(of: "--snapshot")
-        model = StudioModel(inMemory: snapshotIndex != nil)
+        let transitionIndex = arguments.firstIndex(of: "--qa-transition")
+        model = StudioModel(inMemory: snapshotIndex != nil || transitionIndex != nil)
         let compact = arguments.contains("--compact")
         let size = NSSize(width: compact ? 1060 : 1380, height: compact ? 760 : 930)
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
@@ -44,13 +45,23 @@ import LetterCore
         window.minSize = NSSize(width: 1020, height: 760)
         window.contentView = NSHostingView(rootView: WorkspaceView(model: model).padding(.top, 25).background(Palette.deep))
         window.center()
-        if snapshotIndex == nil { window.setFrameAutosaveName("LetterStudioMain") }
+        if snapshotIndex == nil && transitionIndex == nil { window.setFrameAutosaveName("LetterStudioMain") }
         makeMenu()
         NSApp.applicationIconImage = appIcon()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         Task { try? await Task.sleep(for: .milliseconds(150)); window.makeFirstResponder(nil) }
         print("Letter Studio window: \(window.windowNumber)")
+        if let transitionIndex, arguments.count > transitionIndex + 1 {
+            let directory = URL(fileURLWithPath: arguments[transitionIndex + 1])
+            Task {
+                do {
+                    try await TransitionQA.run(model: model, window: window, directory: directory,
+                        audio: arguments.count > transitionIndex + 2 ? URL(fileURLWithPath: arguments[transitionIndex + 2]) : nil)
+                    exit(0)
+                } catch { print("FAIL: \(error)"); exit(1) }
+            }
+        }
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
             if arguments.contains("--materials") { model.panel = .materials; model.document.stationery = .blue }
             if arguments.contains("--writing") { model.panel = .writing }

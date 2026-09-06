@@ -5,7 +5,7 @@ struct PaperView: View {
     let layout: LetterLayout
     var page = 0
     var width: CGFloat = 520
-    var visibleCharacters: Int?
+    var visibleCharacters: Double?
     var decoration = true
     var body: some View {
         let height = width * layout.size.height / layout.size.width
@@ -60,7 +60,7 @@ struct PaperFold: Shape {
 struct InkView: NSViewRepresentable {
     let layout: LetterLayout
     let page: Int
-    let visibleCharacters: Int?
+    let visibleCharacters: Double?
     func makeNSView(context: Context) -> InkNSView { InkNSView() }
     func updateNSView(_ view: InkNSView, context: Context) {
         view.layout = layout; view.page = page; view.visibleCharacters = visibleCharacters
@@ -71,7 +71,7 @@ struct InkView: NSViewRepresentable {
 final class InkNSView: NSView {
     var layout: LetterLayout?
     var page = 0
-    var visibleCharacters: Int?
+    var visibleCharacters: Double?
     override var isOpaque: Bool { false }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
     override func draw(_ dirtyRect: NSRect) {

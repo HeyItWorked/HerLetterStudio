@@ -59,7 +59,7 @@ public extension NSColor {
 
     /// Draws ink in physical page points, with the origin at the bottom left.
     /// Both screen and PDF use this exact function; UI paper effects never enter print output.
-    public func draw(page index: Int, in context: CGContext, visibleUTF16: Int? = nil) {
+    public func draw(page index: Int, in context: CGContext, visibleUTF16: Double? = nil) {
         guard pages.indices.contains(index) else { return }
         context.saveGState()
         context.textMatrix = .identity
@@ -70,12 +70,22 @@ public extension NSColor {
         let frameOrigin = CTFrameGetPath(frame).boundingBox.origin
         for (i, line) in lines.enumerated() {
             let range = CTLineGetStringRange(line)
-            if let visibleUTF16, range.location >= visibleUTF16 { continue }
+            if let visibleUTF16, Double(range.location) >= visibleUTF16 { continue }
             let x = frameOrigin.x + origins[i].x
             let y = frameOrigin.y + origins[i].y
             context.saveGState()
-            if let visibleUTF16, visibleUTF16 < range.location + range.length {
-                let advance = CTLineGetOffsetForStringIndex(line, visibleUTF16, nil)
+            if let visibleUTF16, visibleUTF16 < Double(range.location + range.length) {
+                // Interpolate between composed-character boundaries, preserving ligatures
+                // and surrogate pairs while revealing sub-character ink each frame.
+                let string = attributedText.string as NSString
+                let index = min(string.length - 1, max(0, Int(visibleUTF16)))
+                let cluster = string.rangeOfComposedCharacterSequence(at: index)
+                let lower = max(range.location, cluster.location)
+                let upper = min(range.location + range.length, NSMaxRange(cluster))
+                let fraction = min(1, max(0, (visibleUTF16 - Double(lower)) / Double(max(1, upper - lower))))
+                let start = CTLineGetOffsetForStringIndex(line, lower, nil)
+                let end = CTLineGetOffsetForStringIndex(line, upper, nil)
+                let advance = start + (end - start) * fraction
                 context.clip(to: CGRect(x: x - 8, y: y - 30, width: max(0, advance + 8), height: 90))
             }
             context.textPosition = CGPoint(x: x, y: y)

@@ -2,7 +2,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 app_binary="$PWD/build/Letter Studio.app/Contents/MacOS/LetterStudio"
-if [[ "${1:-ui}" == microphone ]]; then
+if [[ "${1:-ui}" == transition ]]; then
+  "$app_binary" --qa-transition "$PWD/build/${2:-transition}" "${@:3}"
+elif [[ "${1:-ui}" == microphone ]]; then
   "$app_binary" --verify-microphone
 elif [[ "${1:-ui}" == voice ]]; then
   say -v Samantha -o build/voice-fixture.aiff 'Dear Alex. I remember the afternoon by the water. The light was warm and the air was quiet. Thank you for making the ordinary days feel special. With love, Liam.'
