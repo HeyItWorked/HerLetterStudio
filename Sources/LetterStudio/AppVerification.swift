@@ -87,6 +87,28 @@ enum VerificationFailure: Error { case failed(String) }
         await expressive.applyVoiceEdit("Send to the writing desk")
         try check(expressive.showPrint, "writing desk did not open review")
         print("PASS: expression and ink commands, grouped resonance undo, reset, renderer synchronization, print review")
+        let suiteName = "LetterStudio-QA-\(UUID())"
+        let suite = UserDefaults(suiteName: suiteName)!
+        defer { suite.removePersistentDomain(forName: suiteName) }
+        let settings = StudioModel(inMemory: true, preferencesStore: suite)
+        settings.toggleFavorite(.sacramento)
+        settings.quietMode = true
+        let settingsReopened = StudioModel(inMemory: true, preferencesStore: suite)
+        try check(settingsReopened.favoriteHands.contains(.sacramento) && settingsReopened.quietMode, "writing preferences did not persist")
+        expressive.chooseMaterial(.laid)
+        try check(expressive.layout.document.material == .laid, "paper material did not reach screen")
+        await expressive.undoText()
+        try check(expressive.document.material == nil, "paper material undo failed")
+        expressive.toggleFavorite(.parisienne)
+        try check(expressive.favoriteHands.contains(.parisienne), "favorite was not added")
+        expressive.toggleFavorite(.parisienne)
+        try check(!expressive.favoriteHands.contains(.parisienne), "favorite was not removed")
+        expressive.quietMode = true
+        await expressive.replay()
+        try check(!expressive.isReplaying && expressive.visibleCharacters == nil, "quiet mode animated replay")
+        expressive.receiveDictation("A quiet letter.")
+        try check(expressive.visibleCharacters == nil && expressive.document.text == "A quiet letter.", "quiet dictation did not update immediately")
+        print("PASS: material rendering/undo, favorite toggle, quiet replay and dictation")
         let animation = StudioModel(inMemory: true)
         animation.document.text = ""
         animation.receiveDictation("dear Alex, I remember the afternoon by the water.")

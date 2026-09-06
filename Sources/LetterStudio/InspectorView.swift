@@ -166,7 +166,15 @@ struct InspectorView: View {
             }
             }.font(.system(size: 11)).tint(Palette.text)
             VStack(alignment: .leading, spacing: 14) {
-                SmallLabel(text: "Paper").foregroundStyle(Palette.muted)
+                SmallLabel(text: "Paper / Material").foregroundStyle(Palette.muted)
+                Button { model.showPaper = true } label: {
+                    HStack {
+                        Text((model.document.material ?? .bond).name).font(.custom("Baskerville", size: 23))
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                    }.frame(maxWidth: .infinity).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel("Choose paper material")
+                SmallLabel(text: "Paper / Color").foregroundStyle(Palette.muted)
                 HStack(spacing: 12) {
                     ForEach(Stationery.allCases, id: \.self) { paper in
                         Button { model.document.stationery = paper } label: {

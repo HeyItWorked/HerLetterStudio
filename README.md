@@ -80,3 +80,11 @@ Click **Demo** in the left rail, then **Open the sample letter**. This creates �
 In the sample Context folio, click **Watch** to replay the writing without a microphone; **Try an edit** opens a prepared instruction (click Apply instruction); **Print** opens the actual output preview. Photographs inform the writing and are not printed. The editable sample is saved in Letters. Reopening it later retains the letter and photos; Demo opens another fresh copy with the walkthrough controls.
 
 See [PRINTER.md](PRINTER.md) for the Amazon printer shortlist, paper limits and Amazon integration findings.
+
+## The Writing Room
+
+The desk now uses warm walnut, brass accents and an oxblood writing pad. **Paper** opens a stationery drawer with Cotton Rag, Laid, Vellum, Onion Skin and Cream Bond surface previews. The material is saved with the letter and supports undo. Printing defaults to ink only; **Include paper color & texture** includes the same procedural surface used on screen. The material names describe visual textures, not physical paper certification.
+
+**Fonts** now searches names and descriptive words (try “romantic”, “slanted” or “familiar”). Star a hand and enable **Favorites only** to narrow the collection. Favorites persist on this Mac. Search is a text filter, not semantic emotion analysis.
+
+**Quiet** in the rail immediately finishes visible ink animation, stops current readback, and suppresses subsequent reveal/transition motion. Dictation still updates the page immediately; explicit Read aloud remains available. This preference persists and complements macOS Reduce Motion. No decorative sound effects are added.

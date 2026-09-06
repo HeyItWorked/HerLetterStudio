@@ -9,7 +9,7 @@ import LetterCore
     var document: LetterDocument {
         didSet {
             if document.text != oldValue.text || document.handwriting != oldValue.handwriting ||
-                document.expression != oldValue.expression || document.resonance != oldValue.resonance ||
+                document.material != oldValue.material || document.expression != oldValue.expression || document.resonance != oldValue.resonance ||
                 document.fontSize != oldValue.fontSize || document.ink != oldValue.ink || document.paper != oldValue.paper || document.stationery != oldValue.stationery || document.title != oldValue.title {
                 layout = LetterLayout(document: document)
             }
@@ -25,6 +25,20 @@ import LetterCore
     var showWalkthrough = false
     var walkthroughID: UUID?
     var showFonts = false
+    var showPaper = false
+    var favoriteHands: Set<Handwriting> = [] {
+        didSet { preferences?.set(favoriteHands.map(\.rawValue), forKey: "favoriteHands") }
+    }
+    var quietMode = false {
+        didSet {
+            preferences?.set(quietMode, forKey: "quietMode")
+            if quietMode { stopReplay(); inkTask?.cancel(); inkTask = nil; visibleCharacters = nil; speaker.stopSpeaking(at: .immediate) }
+        }
+    }
+    private let preferences: UserDefaults?
+    func toggleFavorite(_ hand: Handwriting) {
+        if favoriteHands.contains(hand) { favoriteHands.remove(hand) } else { favoriteHands.insert(hand) }
+    }
     var commandInput = ""
     var commandFeedback = "Say what you want to change."
     var lastEditBefore = ""
@@ -45,11 +59,12 @@ import LetterCore
         var expression: HandExpression?
         var resonance: Double?
         var ink: Ink
+        var material: PaperMaterial?
     }
     private var undoStack: [Revision] = []
     private var redoStack: [Revision] = []
     private var resizingFont = false
-    private var revision: Revision { Revision(text: document.text, font: document.handwriting, size: document.fontSize, expression: document.expression, resonance: document.resonance, ink: document.ink) }
+    private var revision: Revision { Revision(text: document.text, font: document.handwriting, size: document.fontSize, expression: document.expression, resonance: document.resonance, ink: document.ink, material: document.material) }
     private var saveTask: Task<Void, Never>?
     private var replayTask: Task<Void, Never>?
     private var inkTask: Task<Void, Never>?
@@ -57,7 +72,10 @@ import LetterCore
     private let speaker = AVSpeechSynthesizer()
     enum Panel: String, CaseIterable { case context = "Context", writing = "Writing", materials = "Expression", voice = "Voice Edit" }
 
-    init(inMemory: Bool = false, storageURL: URL? = nil) {
+    init(inMemory: Bool = false, storageURL: URL? = nil, preferencesStore: UserDefaults? = nil) {
+        preferences = preferencesStore ?? (inMemory || storageURL != nil ? nil : .standard)
+        favoriteHands = Set((preferences?.stringArray(forKey: "favoriteHands") ?? []).compactMap(Handwriting.init(rawValue:)))
+        quietMode = preferences?.bool(forKey: "quietMode") ?? false
         FontLibrary.register()
         storage = inMemory ? nil : storageURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
             .appendingPathComponent("Letter Studio", isDirectory: true)
@@ -244,6 +262,12 @@ import LetterCore
         document = updated
     }
 
+    func chooseMaterial(_ material: PaperMaterial) {
+        guard document.material != material else { return }
+        rememberRevision()
+        document.material = material
+    }
+
     func chooseInk(_ ink: Ink) {
         guard document.ink != ink else { return }
         rememberRevision()
@@ -310,6 +334,7 @@ import LetterCore
         document.expression = state.expression
         document.resonance = state.resonance
         document.ink = state.ink
+        document.material = state.material
     }
 
     func updateTypedText(_ text: String) {
@@ -324,7 +349,7 @@ import LetterCore
         let previousCount = Double(document.text.utf16.count)
         let position = visibleCharacters ?? previousCount
         document.text = text
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+        guard !quietMode && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
             inkTask?.cancel(); inkTask = nil
             visibleCharacters = nil; return
         }
@@ -390,7 +415,7 @@ import LetterCore
         guard !document.text.isEmpty else { return }
         visibleCharacters = 0
         isReplaying = true
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+        guard !quietMode && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
             visibleCharacters = nil; isReplaying = false; return
         }
         let total = Double(document.text.utf16.count)

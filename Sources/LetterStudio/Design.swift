@@ -1,14 +1,22 @@
 import SwiftUI
 import LetterCore
 
+private struct QuietWritingKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    var quietWriting: Bool {
+        get { self[QuietWritingKey.self] }
+        set { self[QuietWritingKey.self] = newValue }
+    }
+}
+
 enum Palette {
-    static let desk = Color(hex: 0x254643)
-    static let deep = Color(hex: 0x102B2C)
-    static let mist = Color(hex: 0xD0DBD0)
+    static let desk = Color(hex: 0x493127)
+    static let deep = Color(hex: 0x261C18)
+    static let mist = Color(hex: 0xE3D4BD)
     static let cream = Color(hex: 0xF4EFDF)
     static let panel = Color(hex: 0xEEEADD)
-    static let text = Color(hex: 0x293F39)
-    static let muted = Color(hex: 0x626B5D)
+    static let text = Color(hex: 0x3E3028)
+    static let muted = Color(hex: 0x706154)
     static let brass = Color(hex: 0xE1CDA6)
     static let accent = Color(hex: 0xA5533D)
 }
@@ -48,6 +56,7 @@ private struct InstrumentSurface<Content: View>: View {
     @State private var hovered = false
     @Environment(\.isEnabled) private var enabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.quietWriting) private var quietWriting
     var body: some View {
         content().font(.custom("AvenirNext-Medium", size: 12))
             .padding(.horizontal, 17).padding(.vertical, 12)
@@ -56,11 +65,11 @@ private struct InstrumentSurface<Content: View>: View {
             .clipShape(RoundedRectangle(cornerRadius: 3))
             .overlay(RoundedRectangle(cornerRadius: 3).stroke(filled ? Color.white.opacity(0.4) : Palette.cream.opacity(hovered ? 0.35 : 0.16), lineWidth: 0.6))
             .shadow(color: .black.opacity(filled ? 0.12 : 0), radius: 4, y: 2)
-            .scaleEffect(pressed && !reduceMotion ? 0.98 : 1)
+            .scaleEffect(pressed && !(reduceMotion || quietWriting) ? 0.98 : 1)
             .opacity(enabled ? 1 : 0.4)
             .onHover { hovered = $0 }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: hovered)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: pressed)
+            .animation((reduceMotion || quietWriting) ? nil : .easeOut(duration: 0.16), value: hovered)
+            .animation((reduceMotion || quietWriting) ? nil : .easeOut(duration: 0.1), value: pressed)
     }
 }
 
@@ -104,13 +113,22 @@ struct DeskBackground: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                LinearGradient(colors: [Color(hex: 0x3D5E55), Palette.desk, Palette.deep], startPoint: .topLeading, endPoint: .bottomTrailing)
-                RadialGradient(colors: [Color(hex: 0xA9B49A).opacity(0.15), .clear], center: UnitPoint(x: 0.25, y: 0.28), startRadius: 30, endRadius: proxy.size.width * 0.65)
+                LinearGradient(colors: [Color(hex: 0x795A41), Palette.desk, Palette.deep], startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [Color(hex: 0xF3C886).opacity(0.15), .clear], center: UnitPoint(x: 0.25, y: 0.28), startRadius: 30, endRadius: proxy.size.width * 0.65)
                 Canvas { context, size in
                     for index in 0..<2500 {
                         let x = CGFloat((index * 137 + 43) % 1999) / 1999 * size.width
                         let y = CGFloat((index * 293 + 11) % 1987) / 1987 * size.height
                         context.fill(Path(CGRect(x: x, y: y, width: 0.6, height: 0.6)), with: .color(.white.opacity(0.035)))
+                    }
+                }
+                Canvas { context, size in
+                    for i in 0..<90 {
+                        var grain = Path()
+                        let y = CGFloat(i) * size.height / 90
+                        grain.move(to: CGPoint(x: 0, y: y))
+                        grain.addCurve(to: CGPoint(x: size.width, y: y + 18), control1: CGPoint(x: size.width * 0.3, y: y - CGFloat(i % 7) * 5), control2: CGPoint(x: size.width * 0.65, y: y + 24))
+                        context.stroke(grain, with: .color(.black.opacity(i % 3 == 0 ? 0.045 : 0.02)), lineWidth: CGFloat(i % 3 + 1) * 0.5)
                     }
                 }
                 LinearGradient(colors: [.black.opacity(0.12), .clear, .black.opacity(0.12)], startPoint: .leading, endPoint: .trailing)

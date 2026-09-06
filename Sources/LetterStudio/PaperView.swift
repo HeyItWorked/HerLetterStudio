@@ -10,18 +10,7 @@ struct PaperView: View {
     var body: some View {
         let height = width * layout.size.height / layout.size.width
         ZStack {
-            Color(hex: layout.document.stationery.hex)
-            if decoration {
-                LinearGradient(colors: [.white.opacity(0.18), .clear, .black.opacity(0.025)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Canvas { context, size in
-                    for i in 0..<600 {
-                        let x = CGFloat((i * 137 + 43) % 997) / 997 * size.width
-                        let y = CGFloat((i * 293 + 11) % 991) / 991 * size.height
-                        let rect = CGRect(x: x, y: y, width: CGFloat(i % 3 + 1), height: 0.4)
-                        context.fill(Path(rect), with: .color(.brown.opacity(0.06)))
-                    }
-                }.allowsHitTesting(false)
-            }
+            PaperSurfaceView(layout: layout)
             InkView(layout: layout, page: page, visibleCharacters: visibleCharacters)
                 .accessibilityLabel("Letter page \(page + 1)")
                 .accessibilityValue(layout.document.text)
@@ -79,6 +68,29 @@ final class InkNSView: NSView {
         context.saveGState()
         context.scaleBy(x: bounds.width / layout.size.width, y: bounds.height / layout.size.height)
         layout.draw(page: page, in: context, visibleUTF16: visibleCharacters)
+        context.restoreGState()
+    }
+}
+
+// Paper is a separate native layer so each ink-reveal frame does not redraw fibers.
+struct PaperSurfaceView: NSViewRepresentable {
+    let layout: LetterLayout
+    func makeNSView(context: Context) -> PaperSurfaceNSView { PaperSurfaceNSView() }
+    func updateNSView(_ view: PaperSurfaceNSView, context: Context) {
+        let changed = view.layout?.document.material != layout.document.material ||
+            view.layout?.document.stationery != layout.document.stationery || view.layout?.size != layout.size
+        view.layout = layout
+        if changed { view.needsDisplay = true }
+    }
+}
+final class PaperSurfaceNSView: NSView {
+    var layout: LetterLayout?
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func draw(_ dirtyRect: NSRect) {
+        guard let layout, let context = NSGraphicsContext.current?.cgContext else { return }
+        context.saveGState()
+        context.scaleBy(x: bounds.width / layout.size.width, y: bounds.height / layout.size.height)
+        layout.drawPaper(in: context)
         context.restoreGState()
     }
 }

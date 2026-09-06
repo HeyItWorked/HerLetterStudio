@@ -27,17 +27,19 @@ struct WorkspaceView: View {
                 if model.showLibrary { LibraryView(model: model).transition(.opacity) }
             }
         }
+        .environment(\.quietWriting, model.quietMode)
         .preferredColorScheme(.light)
         .frame(minWidth: 1020, minHeight: 720)
         .sheet(isPresented: $model.showPrint) { PrintPreview(model: model) }
         .sheet(isPresented: $model.showWalkthrough) { WalkthroughView(model: model) }
         .sheet(isPresented: $model.showGuide) { GuideView(model: model) }
+        .sheet(isPresented: $model.showPaper) { PaperPalette(model: model) }
         .sheet(isPresented: $model.showFonts) { FontGallery(model: model) }
         .alert("A little attention needed", isPresented: Binding(get: { model.error != nil || model.speech.error != nil }, set: { if !$0 { model.error = nil; model.speech.error = nil } })) {
             Button("OK") { model.error = nil; model.speech.error = nil }
         } message: { Text(model.error ?? model.speech.error ?? "") }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: model.focusMode)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: model.showLibrary)
+        .animation((reduceMotion || model.quietMode) ? nil : .easeInOut(duration: 0.35), value: model.focusMode)
+        .animation((reduceMotion || model.quietMode) ? nil : .easeInOut(duration: 0.25), value: model.showLibrary)
     }
 
     private var rail: some View {
@@ -50,6 +52,7 @@ struct WorkspaceView: View {
             RailButton(symbol: "play.rectangle", title: "Demo") { model.showWalkthrough = true }
             Spacer()
             RailButton(symbol: model.focusMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right", title: "Focus", selected: model.focusMode) { model.focusMode.toggle() }
+            RailButton(symbol: model.quietMode ? "moon.fill" : "moon", title: "Quiet", selected: model.quietMode) { model.quietMode.toggle() }
             RailButton(symbol: "questionmark.circle", title: "Guide") {
                 model.showGuide = true
             }
@@ -67,6 +70,8 @@ struct WorkspaceView: View {
                     .foregroundStyle(Palette.cream).textFieldStyle(.plain).accessibilityLabel("Letter title")
             }
             Spacer(minLength: 20)
+            Button { model.showPaper = true } label: { Label("Paper", systemImage: "doc") }
+                .buttonStyle(StudioButton())
             Button { Task { await model.stopInput(); model.showFonts = true } } label: { Label("Fonts", systemImage: "textformat") }
                 .buttonStyle(StudioButton())
             Button { Task { await model.edit() } } label: { Label("Edit", systemImage: "pencil.line") }
@@ -103,8 +108,14 @@ struct WorkspaceView: View {
                         }
                     }.frame(maxWidth: .infinity).padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 28)
                 }.scrollIndicators(.hidden)
+                    .background {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(LinearGradient(colors: [Color(hex: 0x583331), Color(hex: 0x392526)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Palette.brass.opacity(0.2), lineWidth: 0.7).padding(5))
+                            .shadow(color: .black.opacity(0.25), radius: 12, x: 6, y: 10)
+                    }
                     .onChange(of: model.layout.pages.count) { _, count in
-                        if model.isBusy { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { scroll.scrollTo(count - 1, anchor: .bottom) } }
+                        if model.isBusy { withAnimation((reduceMotion || model.quietMode) ? nil : .easeInOut(duration: 0.3)) { scroll.scrollTo(count - 1, anchor: .bottom) } }
                     }
             }
         }
@@ -266,7 +277,7 @@ struct PrintPreview: View {
                 Text("From you,\nwith love.").font(.custom("Baskerville", size: 42)).foregroundStyle(Palette.text)
                 Text("\(model.layout.pages.count) \(model.layout.pages.count == 1 ? "page" : "pages") · \(model.document.paper.name) · Actual size")
                     .font(.system(size: 12)).foregroundStyle(Palette.muted)
-                Toggle("Include paper color", isOn: $model.includePaperColor).font(.system(size: 12)).tint(Palette.text)
+                Toggle("Include paper color & texture", isOn: $model.includePaperColor).font(.system(size: 12)).tint(Palette.text)
                 Text(model.includePaperColor ? "Your PDF includes the selected paper color. Printers may leave a white border." : "Only the ink will print. Load your own stationery to match the paper shown here.")
                     .font(.system(size: 12)).lineSpacing(5).foregroundStyle(Palette.muted)
                 Spacer()

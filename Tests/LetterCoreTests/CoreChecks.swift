@@ -26,6 +26,16 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         let samplePDF = PDFDocument(data: LetterLayout(document: walkthrough).pdfData())
         try expect(samplePDF?.string?.filter { !$0.isWhitespace } == walkthrough.text.filter { !$0.isWhitespace }, "walkthrough output lost text")
         try expect(samplePDF?.pageCount == 1, "walkthrough should fit on one page")
+        for stock in PaperMaterial.allCases {
+            var letter = walkthrough
+            letter.material = stock
+            let reopened = try JSONDecoder().decode(LetterDocument.self, from: JSONEncoder().encode(letter))
+            try expect(reopened.material == stock, "paper material lost on reopen")
+            let pdf = PDFDocument(data: LetterLayout(document: letter).pdfData(includePaperColor: true))
+            try expect(pdf?.string?.filter { !$0.isWhitespace } == letter.text.filter { !$0.isWhitespace }, "paper texture changed PDF content")
+        }
+        try expect(Handwriting.galleryOrder.filter { $0.matches("romantic") }.contains(.parisienne), "mood search missed Parisienne")
+        try expect(Handwriting.galleryOrder.filter { $0.matches("no such hand") }.isEmpty, "unknown search returned fonts")
         try bundledFontsResolve()
         print("PASS: 10 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, expanded edits, fonts, expression/PDF compatibility)")
     }

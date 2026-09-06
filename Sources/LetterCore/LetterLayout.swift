@@ -98,6 +98,33 @@ public extension NSColor {
         context.restoreGState()
     }
 
+    /// Shared decorative paper surface. Exported only when paper color is requested.
+    public func drawPaper(in context: CGContext) {
+        context.saveGState()
+        context.setFillColor(NSColor(rgb: document.stationery.hex).cgColor)
+        context.fill(CGRect(origin: .zero, size: size))
+        let material = document.material ?? .bond
+        if material == .laid {
+            context.setStrokeColor(NSColor.brown.withAlphaComponent(0.08).cgColor)
+            context.setLineWidth(0.4)
+            for y in stride(from: 0.0, to: size.height, by: 4) {
+                context.move(to: CGPoint(x: 0, y: y)); context.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.strokePath()
+        }
+        if material != .vellum {
+            let count = material == .cotton ? 1900 : material == .onion ? 800 : 600
+            context.setFillColor(NSColor.brown.withAlphaComponent(material == .onion ? 0.035 : 0.06).cgColor)
+            for i in 0..<count {
+                let x = Double((i * 137 + 43) % 1999) / 1999 * size.width
+                let y = Double((i * 293 + 11) % 1987) / 1987 * size.height
+                let width = material == .onion ? Double(i % 7 + 4) : Double(i % 3 + 1)
+                context.fillEllipse(in: CGRect(x: x, y: y, width: width, height: material == .onion ? width * 0.35 : 0.45))
+            }
+        }
+        context.restoreGState()
+    }
+
     public func pdfData(includePaperColor: Bool = false) -> Data {
         let data = NSMutableData()
         var bounds = CGRect(origin: .zero, size: size)
@@ -109,8 +136,7 @@ public extension NSColor {
         for index in pages.indices {
             context.beginPDFPage(nil)
             if includePaperColor {
-                context.setFillColor(NSColor(rgb: document.stationery.hex).cgColor)
-                context.fill(bounds)
+                drawPaper(in: context)
             }
             draw(page: index, in: context)
             context.endPDFPage()

@@ -5,6 +5,11 @@ struct FontGallery: View {
     @Bindable var model: StudioModel
     @State private var sample = "Dear you,\n\nSome things deserve a letter.\nA memory. A little gratitude.\n\nWith love,"
     @State private var editingSample = false
+    @State private var query = ""
+    @State private var favoritesOnly = false
+    private var hands: [Handwriting] {
+        Handwriting.galleryOrder.filter { $0.matches(query) && (!favoritesOnly || model.favoriteHands.contains($0)) }
+    }
     @FocusState private var doneFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
@@ -12,24 +17,37 @@ struct FontGallery: View {
             VStack(alignment: .leading, spacing: 0) {
                 SmallLabel(text: "The type collection").foregroundStyle(Palette.muted)
                 Text("A voice\non paper.").font(.custom("Baskerville", size: 35)).lineSpacing(-2).padding(.top, 16).padding(.bottom, 28)
+                TextField("Search name or feeling", text: $query)
+                    .textFieldStyle(.plain).font(.system(size: 12)).padding(10)
+                    .background(Palette.cream.opacity(0.6)).accessibilityLabel("Search hands")
+                Toggle("Favorites only", isOn: $favoritesOnly).toggleStyle(.checkbox)
+                    .font(.system(size: 11)).padding(.vertical, 12)
                 ScrollView {
-                VStack(spacing: 0) {
-                ForEach(Array(Handwriting.galleryOrder.enumerated()), id: \.element) { index, style in
-                    Button { model.chooseFont(style) } label: {
-                        HStack(spacing: 12) {
-                            Text(String(format: "%02d", index + 1)).font(.system(size: 9, design: .monospaced))
-                                .foregroundStyle(Palette.muted)
-                            Text(style.name).font(.custom("AvenirNext-Medium", size: 13))
-                            Spacer()
-                            if model.document.handwriting == style { Image(systemName: "arrow.right").font(.system(size: 11)) }
-                        }.padding(.vertical, 15).padding(.horizontal, 10)
-                            .contentShape(Rectangle())
-                            .background(model.document.handwriting == style ? Palette.text.opacity(0.065) : .clear)
-                            .overlay(alignment: .bottom) { Rectangle().fill(Palette.text.opacity(0.12)).frame(height: 0.5) }
-                    }.buttonStyle(.plain).accessibilityLabel("Choose \(style.name)")
-                        .accessibilityAddTraits(model.document.handwriting == style ? .isSelected : [])
-                }
-                }
+                    VStack(spacing: 0) {
+                        if hands.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text(favoritesOnly ? "No favorite hands here." : "No matching hands.").font(.custom("Baskerville", size: 20))
+                                Button("Show all hands") { query = ""; favoritesOnly = false }.buttonStyle(.plain)
+                            }.padding(.vertical, 24).frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        ForEach(hands, id: \.self) { style in
+                            HStack(spacing: 0) {
+                                Button { model.chooseFont(style) } label: {
+                                    HStack {
+                                        Text(style.name).font(.custom("AvenirNext-Medium", size: 12))
+                                        Spacer(minLength: 2)
+                                        if model.document.handwriting == style { Image(systemName: "arrow.right").font(.system(size: 10)) }
+                                    }.padding(.vertical, 15).padding(.leading, 10).contentShape(Rectangle())
+                                }.buttonStyle(.plain).accessibilityLabel("Choose \(style.name)")
+                                    .accessibilityAddTraits(model.document.handwriting == style ? .isSelected : [])
+                                Button { model.toggleFavorite(style) } label: {
+                                    Image(systemName: model.favoriteHands.contains(style) ? "star.fill" : "star")
+                                        .font(.system(size: 11)).frame(width: 32, height: 44).contentShape(Rectangle())
+                                }.buttonStyle(.plain).accessibilityLabel("\(model.favoriteHands.contains(style) ? "Unfavorite" : "Favorite") \(style.name)")
+                            }.background(model.document.handwriting == style ? Palette.text.opacity(0.065) : .clear)
+                                .overlay(alignment: .bottom) { Rectangle().fill(Palette.text.opacity(0.12)).frame(height: 0.5) }
+                        }
+                    }
                 }.scrollIndicators(.visible)
                 Spacer(minLength: 18)
                 Text("\(Handwriting.allCases.count) ways to make\nyourself heard.").font(.custom("Baskerville-Italic", size: 16)).foregroundStyle(Palette.muted)
@@ -71,7 +89,7 @@ struct FontGallery: View {
                 .overlay(alignment: .leading) { LinearGradient(colors: [.black.opacity(0.08), .clear], startPoint: .leading, endPoint: .trailing).frame(width: 12).allowsHitTesting(false) }
         }.foregroundStyle(Palette.text).frame(width: 820, height: 650)
             .defaultFocus($doneFocused, true)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: model.document.handwriting)
+            .animation((reduceMotion || model.quietMode) ? nil : .easeOut(duration: 0.16), value: model.document.handwriting)
     }
 }
 

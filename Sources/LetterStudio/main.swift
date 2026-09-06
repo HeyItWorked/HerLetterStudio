@@ -48,7 +48,7 @@ import LetterCore
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
-        window.backgroundColor = NSColor(rgb: 0x102B2C)
+        window.backgroundColor = NSColor(rgb: 0x261C18)
         window.minSize = NSSize(width: 1020, height: 760)
         window.contentView = NSHostingView(rootView: WorkspaceView(model: model).padding(.top, 25).background(Palette.deep))
         window.center()
@@ -78,6 +78,9 @@ import LetterCore
         if arguments.contains("--demo"), snapshotIndex == nil { Task { await model.openWalkthrough() } }
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
             if arguments.contains("--demo"), let sample = try? Walkthrough.letter() { model.document = sample; model.walkthroughID = sample.id }
+            if arguments.contains("--paper") { model.showPaper = true }
+            if arguments.contains("--laid") { model.chooseMaterial(.laid) }
+            if arguments.contains("--quiet") { model.quietMode = true }
             if arguments.contains("--walkthrough") { model.showWalkthrough = true }
             if arguments.contains("--focus") { model.focusMode = true }
             if arguments.contains("--preparing") { model.speech.state = .preparing; model.speech.status = "Preparing on-device dictation…" }

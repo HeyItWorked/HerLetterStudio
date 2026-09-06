@@ -14,6 +14,29 @@ public enum Handwriting: String, Codable, CaseIterable, Sendable {
     }
 }
 
+public extension Handwriting {
+    func matches(_ query: String) -> Bool {
+        let words = (name + " " + subtitle + " " + rawValue).lowercased()
+        return query.lowercased().split(whereSeparator: \.isWhitespace).allSatisfy { words.contains($0) }
+    }
+}
+
+public enum PaperMaterial: String, Codable, CaseIterable, Sendable {
+    case cotton, laid, vellum, onion, bond
+    public var name: String {
+        switch self { case .cotton: "Cotton Rag"; case .laid: "Laid"; case .vellum: "Vellum"; case .onion: "Onion Skin"; case .bond: "Cream Bond" }
+    }
+    public var detail: String {
+        switch self {
+        case .cotton: "Soft fibers, an intimate letter"
+        case .laid: "Fine horizontal lines, traditional correspondence"
+        case .vellum: "A smooth, quiet surface"
+        case .onion: "Delicate mottling, an airmail memory"
+        case .bond: "A familiar, lightly textured sheet"
+        }
+    }
+}
+
 public enum Stationery: String, Codable, CaseIterable, Sendable {
     case ivory, blue, white, rose
     public var name: String { rawValue.capitalized }
@@ -97,6 +120,7 @@ public struct LetterDocument: Codable, Identifiable, Equatable, Sendable {
         guard let expression else { return 1 }
         return expression.pace * (1.15 - effectiveResonance * 0.3)
     }
+    public var material: PaperMaterial?
     public var stationery: Stationery = .ivory
     public var ink: Ink = .indigo
     public var paper: Paper = .letter
