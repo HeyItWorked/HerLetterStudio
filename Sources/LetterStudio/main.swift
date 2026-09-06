@@ -78,6 +78,9 @@ import LetterCore
         if arguments.contains("--demo"), snapshotIndex == nil { Task { await model.openWalkthrough() } }
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
             if arguments.contains("--demo"), let sample = try? Walkthrough.letter() { model.document = sample; model.walkthroughID = sample.id }
+            if arguments.contains("--long-letter") { model.document.text = Array(repeating: "Dear friend, I remember the days by the water and the ordinary kindness you brought into our lives.\n\n", count: 35).joined() }
+            if arguments.contains("--drafts") { model.keepDraft(name: "First thoughts"); model.showDrafts = true }
+            if arguments.contains("--editor") { model.showEditor = true }
             if arguments.contains("--paper") { model.showPaper = true }
             if arguments.contains("--laid") { model.chooseMaterial(.laid) }
             if arguments.contains("--quiet") { model.quietMode = true }
@@ -138,8 +141,8 @@ import LetterCore
         file.addItem(withTitle: "Print Preview…", action: #selector(printPreview), keyEquivalent: "p")
         let fileItem = NSMenuItem(); fileItem.submenu = file; bar.addItem(fileItem)
         let edit = NSMenu(title: "Edit")
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        let redo = edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Undo", action: #selector(undo(_:)), keyEquivalent: "z")
+        let redo = edit.addItem(withTitle: "Redo", action: #selector(redo(_:)), keyEquivalent: "z")
         redo.keyEquivalentModifierMask = [.command, .shift]
         edit.addItem(.separator())
         edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
@@ -164,6 +167,8 @@ import LetterCore
             }
         }
     }
+    @objc func undo(_ sender: Any?) { Task { await model.undoText() } }
+    @objc func redo(_ sender: Any?) { Task { await model.redoText() } }
     @objc func newLetter() { Task { await model.newLetter() } }
     @objc func openLetter() { Task { await model.importDocument() } }
     @objc func save() { model.saveNow() }

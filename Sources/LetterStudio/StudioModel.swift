@@ -18,6 +18,7 @@ import LetterCore
     }
     var layout: LetterLayout
     var library: [LetterDocument] = []
+    var trash: [LetterDocument] = []
     var panel: Panel = .context
     var showLibrary = false
     var showPrint = false
@@ -26,6 +27,71 @@ import LetterCore
     var walkthroughID: UUID?
     var showFonts = false
     var showPaper = false
+    var showDrafts = false
+    var showEditor = false
+    var editorSelection = NSRange(location: 0, length: 0)
+    func editPage(_ page: Int) async {
+        let id = document.id
+        let range = layout.pages.indices.contains(page) ? layout.pages[page].range : NSRange(location: 0, length: 0)
+        await stopInput()
+        guard document.id == id else { return }
+        editorSelection = range
+        showEditor = true
+    }
+    var drafts: [SavedDraft] = []
+    private var lastTypingTime = Date.distantPast
+
+    func loadDrafts() {
+        drafts = []
+        guard let url = draftURL, FileManager.default.fileExists(atPath: url.path) else { return }
+        do { drafts = try JSONDecoder().decode([SavedDraft].self, from: Data(contentsOf: url)) }
+        catch { self.error = "Saved drafts could not be read. The original file has been preserved." }
+    }
+
+    private var draftURL: URL? { storage?.appendingPathComponent("\(document.id).drafts") }
+
+    @discardableResult func keepDraft(name: String = "") -> Bool {
+        loadDraftsIfNeeded()
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let draft = SavedDraft(name: trimmed.isEmpty ? "Draft \(drafts.count + 1)" : trimmed, document: document)
+        let updated = [draft] + drafts
+        do {
+            if let url = draftURL {
+                // Never overwrite an unreadable history file.
+                if FileManager.default.fileExists(atPath: url.path) {
+                    _ = try JSONDecoder().decode([SavedDraft].self, from: Data(contentsOf: url))
+                }
+                try JSONEncoder().encode(updated).write(to: url, options: .atomic)
+            }
+            drafts = updated
+            return true
+        } catch { self.error = "Couldn't keep this draft: \(error.localizedDescription)"; return false }
+    }
+
+    private func loadDraftsIfNeeded() { if drafts.isEmpty { loadDrafts() } }
+
+    func restoreDraft(_ draft: SavedDraft) async {
+        let id = document.id
+        await stopInput()
+        guard document.id == id, draft.document.id == id, keepDraft(name: "Before restoring \(draft.name)") else { return }
+        rememberRevision()
+        document = draft.document
+        saveNow()
+        showDrafts = false
+    }
+
+    func duplicate(_ letter: LetterDocument) async {
+        await stopInput()
+        guard saveNow() else { return }
+        var copy = library.first(where: { $0.id == letter.id }) ?? letter
+        copy.id = UUID()
+        copy.title += " — Copy"
+        copy.updatedAt = Date()
+        document = copy
+        clearHistory()
+        showLibrary = false
+        saveNow()
+    }
     var favoriteHands: Set<Handwriting> = [] {
         didSet { preferences?.set(favoriteHands.map(\.rawValue), forKey: "favoriteHands") }
     }
@@ -52,19 +118,10 @@ import LetterCore
     var commandMode = false
     var commandTranscript = ""
     let speech = SpeechController()
-    private struct Revision: Equatable {
-        var text: String
-        var font: Handwriting
-        var size: Double
-        var expression: HandExpression?
-        var resonance: Double?
-        var ink: Ink
-        var material: PaperMaterial?
-    }
-    private var undoStack: [Revision] = []
-    private var redoStack: [Revision] = []
+    private var undoStack: [LetterDocument] = []
+    private var redoStack: [LetterDocument] = []
     private var resizingFont = false
-    private var revision: Revision { Revision(text: document.text, font: document.handwriting, size: document.fontSize, expression: document.expression, resonance: document.resonance, ink: document.ink, material: document.material) }
+    private var revision: LetterDocument { document }
     private var saveTask: Task<Void, Never>?
     private var replayTask: Task<Void, Never>?
     private var inkTask: Task<Void, Never>?
@@ -80,11 +137,16 @@ import LetterCore
         storage = inMemory ? nil : storageURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
             .appendingPathComponent("Letter Studio", isDirectory: true)
         var loaded: [LetterDocument] = []
+        var discarded: [LetterDocument] = []
         var loadError: String?
         if let storage {
             do {
                 try FileManager.default.createDirectory(at: storage, withIntermediateDirectories: true)
                 let files = try FileManager.default.contentsOfDirectory(at: storage, includingPropertiesForKeys: nil)
+                for file in files where file.pathExtension == "trashed" {
+                    do { discarded.append(try DocumentStorage.load(from: file)) }
+                    catch { loadError = "A letter in Recently Removed could not be read. Its file has been preserved." }
+                }
                 for file in files where file.pathExtension == "letter" {
                     do { loaded.append(try DocumentStorage.load(from: file)) }
                     catch { loadError = "A saved letter could not be opened. Its original file has been preserved in your library folder." }
@@ -96,6 +158,7 @@ import LetterCore
         document = first
         layout = LetterLayout(document: first)
         library = loaded.isEmpty ? [first] : loaded
+        trash = discarded.sorted { $0.updatedAt > $1.updatedAt }
         error = loadError
         if !inMemory && loadError == nil { saveNow() }
     }
@@ -165,6 +228,36 @@ import LetterCore
         showLibrary = false
     }
 
+    func removeLetter(_ letter: LetterDocument) async {
+        await stopInput()
+        guard saveNow() else { return }
+        let saved = library.first(where: { $0.id == letter.id }) ?? letter
+        do {
+            if let storage {
+                try FileManager.default.moveItem(at: storage.appendingPathComponent("\(letter.id).letter"),
+                    to: storage.appendingPathComponent("\(letter.id).trashed"))
+            }
+            library.removeAll { $0.id == letter.id }
+            trash.insert(saved, at: 0)
+            if document.id == letter.id {
+                document = library.first ?? LetterDocument()
+                clearHistory()
+                saveNow()
+            }
+        } catch { self.error = "Couldn't move this letter to Recently Removed: \(error.localizedDescription)" }
+    }
+
+    func recoverLetter(_ letter: LetterDocument) {
+        do {
+            if let storage {
+                try FileManager.default.moveItem(at: storage.appendingPathComponent("\(letter.id).trashed"),
+                    to: storage.appendingPathComponent("\(letter.id).letter"))
+            }
+            trash.removeAll { $0.id == letter.id }
+            library.insert(letter, at: 0)
+        } catch { self.error = "Couldn't recover this letter: \(error.localizedDescription)" }
+    }
+
     func toggleDictation() async {
         if commandMode { await finishCommand(); return }
         if isBusy { await speech.stop(); return }
@@ -220,6 +313,7 @@ import LetterCore
         let documentID = document.id
         await stopInput()
         guard document.id == documentID else { return }
+        lastEditBefore = ""; lastEditAfter = ""
         guard let command = VoiceCommand.parse(input) else {
             commandFeedback = "I didn't recognize that edit. Try one of the examples below."
             return
@@ -313,6 +407,7 @@ import LetterCore
     }
 
     private func rememberRevision(clearRedo: Bool = true) {
+        lastTypingTime = .distantPast
         if undoStack.last != revision { undoStack.append(revision) }
         if undoStack.count > 50 { undoStack.removeFirst() }
         if clearRedo { redoStack.removeAll() }
@@ -320,25 +415,25 @@ import LetterCore
 
     private func clearHistory() {
         resizingFont = false
+        lastTypingTime = .distantPast
+        drafts = []
         undoStack.removeAll(); redoStack.removeAll()
         lastEditBefore = ""; lastEditAfter = ""
         commandInput = ""; commandFeedback = "Say what you want to change."
     }
 
-    private func restore(_ state: Revision) {
+    private func restore(_ state: LetterDocument) {
+        lastTypingTime = .distantPast
         lastEditBefore = document.text
         lastEditAfter = state.text
-        document.text = state.text
-        document.handwriting = state.font
-        document.fontSize = state.size
-        document.expression = state.expression
-        document.resonance = state.resonance
-        document.ink = state.ink
-        document.material = state.material
+        document = state
     }
 
     func updateTypedText(_ text: String) {
         guard text != document.text else { return }
+        let now = Date()
+        if now.timeIntervalSince(lastTypingTime) > 1 { rememberRevision() }
+        lastTypingTime = now
         redoStack.removeAll()
         document.text = text
     }
@@ -379,6 +474,7 @@ import LetterCore
     func edit() async {
         await stopInput()
         rememberRevision(clearRedo: false)
+        focusMode = false
         panel = .writing
     }
 

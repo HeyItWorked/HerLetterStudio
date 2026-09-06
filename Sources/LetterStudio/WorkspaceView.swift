@@ -33,6 +33,8 @@ struct WorkspaceView: View {
         .sheet(isPresented: $model.showPrint) { PrintPreview(model: model) }
         .sheet(isPresented: $model.showWalkthrough) { WalkthroughView(model: model) }
         .sheet(isPresented: $model.showGuide) { GuideView(model: model) }
+        .sheet(isPresented: $model.showEditor) { LetterEditor(model: model) }
+        .sheet(isPresented: $model.showDrafts) { DraftsView(model: model) }
         .sheet(isPresented: $model.showPaper) { PaperPalette(model: model) }
         .sheet(isPresented: $model.showFonts) { FontGallery(model: model) }
         .alert("A little attention needed", isPresented: Binding(get: { model.error != nil || model.speech.error != nil }, set: { if !$0 { model.error = nil; model.speech.error = nil } })) {
@@ -83,43 +85,7 @@ struct WorkspaceView: View {
         }
     }
 
-    private var writingDesk: some View {
-        GeometryReader { geometry in
-            let paperWidth = min(560, geometry.size.width - 34, max(340, (geometry.size.height - 68) * model.layout.size.width / model.layout.size.height))
-            ScrollViewReader { scroll in
-                ScrollView {
-                    VStack(spacing: 28) {
-                        ForEach(model.layout.pages.indices, id: \.self) { index in
-                            VStack(spacing: 13) {
-                                HStack {
-                                    SmallLabel(text: index == 0 ? "Personal letter" : "Continued")
-                                    Spacer()
-                                    Text(String(format: "%02d", index + 1)).font(.system(size: 10, design: .monospaced))
-                                }.foregroundStyle(Palette.mist)
-                                ZStack {
-                                    Rectangle().fill(Color(hex: model.document.stationery.hex).opacity(0.75))
-                                        .offset(x: 3, y: 4)
-                                        .shadow(color: .black.opacity(0.15), radius: 2, y: 2)
-                                    PaperView(layout: model.layout, page: index, width: paperWidth, visibleCharacters: model.visibleCharacters)
-                                        .shadow(color: .black.opacity(0.25), radius: 22, x: 4, y: 16)
-                                }.frame(width: paperWidth, height: paperWidth * model.layout.size.height / model.layout.size.width)
-                                    .onTapGesture { Task { await model.edit() } }
-                            }.frame(width: paperWidth).id(index)
-                        }
-                    }.frame(maxWidth: .infinity).padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 28)
-                }.scrollIndicators(.hidden)
-                    .background {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(LinearGradient(colors: [Color(hex: 0x583331), Color(hex: 0x392526)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Palette.brass.opacity(0.2), lineWidth: 0.7).padding(5))
-                            .shadow(color: .black.opacity(0.25), radius: 12, x: 6, y: 10)
-                    }
-                    .onChange(of: model.layout.pages.count) { _, count in
-                        if model.isBusy { withAnimation((reduceMotion || model.quietMode) ? nil : .easeInOut(duration: 0.3)) { scroll.scrollTo(count - 1, anchor: .bottom) } }
-                    }
-            }
-        }
-    }
+    private var writingDesk: some View { PaperDesk(model: model) }
 
     private var footer: some View {
         HStack(spacing: 18) {
@@ -136,7 +102,9 @@ struct WorkspaceView: View {
                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Palette.mist)
             }
             Spacer(minLength: 5)
-            Button { model.panel = .voice } label: {
+            Button("Drafts", systemImage: "clock.arrow.circlepath") { model.loadDrafts(); model.showDrafts = true }
+                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Palette.mist)
+            Button { model.focusMode = false; model.panel = .voice } label: {
                 Label("Voice edit", systemImage: "text.bubble").font(.system(size: 11))
             }.buttonStyle(.plain).foregroundStyle(Palette.mist)
                 .help("Voice command: new paragraph, undo, read back, replace words, or print preview").accessibilityLabel("Voice command")
@@ -164,8 +132,10 @@ struct GuideView: View {
             SmallLabel(text: "A small guide").foregroundStyle(Palette.muted)
             Text("Begin with something true.").font(.system(size: 31, design: .serif)).foregroundStyle(Palette.text)
             Text("Create a letter with New, then add a recipient and a few notes. Begin dictation to speak, or open Writing to type. Your words appear on the page as you go.")
-            Text("Materials lets you choose handwriting, ink, and stationery. Print opens the preview, PDF export, and your Mac's print panel. Your reference notes and photographs stay off the printed page.")
+            Text("Fonts previews lettering; Expression adjusts ink and spacing; Paper chooses the material. Print opens the preview, PDF export, and your Mac's print panel. Your reference notes and photographs stay off the printed page.")
             Text("For voice edits, open Voice edit, press Speak an edit, then Apply edit. You can also type an edit. Try “new paragraph”, “undo”, “read it back”, “print preview”, or “replace [words] with [new words]”.")
+            Text("Use Fit, Fit Width, or pinch to inspect the page. Zoom changes the preview only. Drafts keeps versions you can restore after reopening. The Letters archive supports sorting, duplication, and recoverable removal.")
+            Button("Explore a complete sample") { model.showGuide = false; model.showWalkthrough = true }.buttonStyle(.plain)
             Text("⌘N  New    ⌘E  Edit    ⇧⌘D  Dictate    ⌘P  Print    ⌘S  Save")
                 .font(.system(size: 11, design: .monospaced))
             Divider()
@@ -180,8 +150,12 @@ struct GuideView: View {
 struct LibraryView: View {
     @Bindable var model: StudioModel
     @State private var query = ""
+    @State private var removed = false
+    @State private var byTitle = false
     private var letters: [LetterDocument] {
-        model.library.filter { query.isEmpty || ($0.title + $0.recipient + $0.text).localizedCaseInsensitiveContains(query) }
+        (removed ? model.trash : model.library)
+            .filter { query.isEmpty || ($0.title + " " + $0.recipient + " " + $0.text).localizedCaseInsensitiveContains(query) }
+            .sorted { byTitle ? $0.title.localizedStandardCompare($1.title) == .orderedAscending : $0.updatedAt > $1.updatedAt }
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -206,20 +180,39 @@ struct LibraryView: View {
                         .accessibilityLabel("Search letters")
                 }.font(.custom("AvenirNext-Regular", size: 13))
                 Spacer()
-                SmallLabel(text: "\(letters.count) \(letters.count == 1 ? "letter" : "letters")").foregroundStyle(Palette.mist)
+                Menu(removed ? "Recently Removed" : "All letters") {
+                    Button("All letters") { removed = false }
+                    Button("Recently Removed") { removed = true }
+                }.foregroundStyle(Palette.cream)
+                Menu(byTitle ? "Title A–Z" : "Recently edited") {
+                    Button("Recently edited") { byTitle = false }
+                    Button("Title A–Z") { byTitle = true }
+                }.foregroundStyle(Palette.cream)
             }.padding(.vertical, 18)
+            Text(removed ? "Click a letter to recover it. Nothing here is automatically erased." : "Open a letter to rename it in the title field. Right-click for duplicate or remove.")
+                .font(.system(size: 11)).foregroundStyle(Palette.mist).padding(.bottom, 10)
             Rectangle().fill(Palette.brass.opacity(0.3)).frame(height: 0.5)
             ScrollView {
                 LazyVStack(spacing: 0) {
                     if letters.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("No letters found.").font(.custom("Baskerville", size: 30))
-                            Text("Try another name or a few words from the letter.").font(.system(size: 13))
+                            Text(removed ? "Removed letters stay here until you recover them. Click a letter to recover it." : "Try another name or a few words from the letter.").font(.system(size: 13))
                             Button("Clear search") { query = "" }.buttonStyle(StudioButton())
                         }.foregroundStyle(Palette.cream).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 50)
                     }
                     ForEach(Array(letters.enumerated()), id: \.element.id) { index, letter in
-                        ArchiveRow(letter: letter, index: index) { Task { await model.select(letter) } }
+                        ArchiveRow(letter: letter, index: index) {
+                            if removed { model.recoverLetter(letter) } else { Task { await model.select(letter) } }
+                        }
+                            .contextMenu {
+                                if removed {
+                                    Button("Recover letter") { model.recoverLetter(letter) }
+                                } else {
+                                    Button("Duplicate letter") { Task { await model.duplicate(letter) } }
+                                    Button("Move to Recently Removed") { Task { await model.removeLetter(letter) } }
+                                }
+                            }
                     }
                 }
             }.scrollIndicators(.visible)
@@ -265,28 +258,25 @@ struct PrintPreview: View {
     @Bindable var model: StudioModel
     var body: some View {
         HStack(spacing: 32) {
-            ScrollView {
-                VStack(spacing: 20) {
-                    ForEach(model.layout.pages.indices, id: \.self) { index in
-                        PaperView(layout: model.layout, page: index, width: 350, decoration: false)
-                    }
-                }.padding(20)
-            }.frame(width: 390).background(Color(hex: 0xD6DCD4))
-            VStack(alignment: .leading, spacing: 24) {
+            OutputPreview(data: model.layout.pdfData(includePaperColor: model.includePaperColor))
+                .frame(width: 390)
+            VStack(alignment: .leading, spacing: 18) {
                 SmallLabel(text: "From screen to paper").foregroundStyle(Palette.muted)
-                Text("From you,\nwith love.").font(.custom("Baskerville", size: 42)).foregroundStyle(Palette.text)
-                Text("\(model.layout.pages.count) \(model.layout.pages.count == 1 ? "page" : "pages") · \(model.document.paper.name) · Actual size")
+                Text("From you,\nwith love.").font(.custom("Baskerville", size: 38)).fixedSize(horizontal: false, vertical: true).foregroundStyle(Palette.text)
+                Text("\(model.layout.pages.count) \(model.layout.pages.count == 1 ? "page" : "pages") · \(model.document.paper.name) · Print at 100%")
                     .font(.system(size: 12)).foregroundStyle(Palette.muted)
                 Toggle("Include paper color & texture", isOn: $model.includePaperColor).font(.system(size: 12)).tint(Palette.text)
-                Text(model.includePaperColor ? "Your PDF includes the selected paper color. Printers may leave a white border." : "Only the ink will print. Load your own stationery to match the paper shown here.")
-                    .font(.system(size: 12)).lineSpacing(5).foregroundStyle(Palette.muted)
+                Text(model.includePaperColor ? "Your PDF includes paper color and texture, which use extra ink. Printers may leave a white border." : "Only the lettering prints. Load your own stationery; the white preview represents unprinted paper.")
+                    .font(.system(size: 12)).lineSpacing(4).fixedSize(horizontal: false, vertical: true).foregroundStyle(Palette.muted)
+                Text("Match the paper size in your Mac’s print panel. Text margins: 0.92 in at the sides; at least 0.81 in at the top and bottom. Reference photos and notes are excluded.")
+                    .font(.system(size: 11)).fixedSize(horizontal: false, vertical: true).foregroundStyle(Palette.muted)
                 Spacer()
                 Button { model.printLetter() } label: {
                     Label("Choose printer…", systemImage: "printer").frame(maxWidth: .infinity)
                 }.buttonStyle(FolioButton(primary: true))
                 Button { model.exportPDF() } label: { Label("Save PDF…", systemImage: "arrow.down.document").frame(maxWidth: .infinity) }.buttonStyle(FolioButton())
-                Button("Back to writing") { model.showPrint = false }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(Palette.muted)
-            }.padding(.vertical, 30).frame(width: 245)
+                Button("Back to writing") { model.showPrint = false }.keyboardShortcut(.cancelAction).buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(Palette.muted)
+            }.padding(.vertical, 20).frame(width: 245)
         }.padding(24).background(Palette.cream).frame(width: 760, height: 650)
     }
 }

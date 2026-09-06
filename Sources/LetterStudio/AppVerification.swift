@@ -29,7 +29,59 @@ enum VerificationFailure: Error { case failed(String) }
         }
     }
 
+    static func workflowRecovery() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("LetterWorkflow-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let model = StudioModel(storageURL: directory)
+        model.document.text = "An earlier version."
+        model.document.stationery = .rose
+        let id = model.document.id
+        try check(model.keepDraft(name: "Original"), "draft save failed")
+        model.updateTypedText("A revised version.")
+        model.document.stationery = .blue
+        try check(model.saveNow(), "revised letter save failed")
+        let reopened = StudioModel(storageURL: directory)
+        reopened.loadDrafts()
+        try check(reopened.drafts.count == 1 && reopened.drafts[0].name == "Original", "draft not retained after reopening")
+        await reopened.restoreDraft(reopened.drafts[0])
+        try check(reopened.document.text == "An earlier version." && reopened.document.stationery == .rose, "draft restore lost content or materials")
+        try check(reopened.drafts.count == 2, "restore did not preserve current version")
+        await reopened.undoText()
+        try check(reopened.document.text == "A revised version." && reopened.document.stationery == .blue, "restore undo incomplete")
+        reopened.focusMode = true
+        await reopened.edit()
+        try check(!reopened.focusMode && reopened.panel == .writing, "editing remained hidden in focus mode")
+        let original = reopened.document
+        await reopened.duplicate(original)
+        try check(reopened.document.id != id && reopened.document.text == original.text, "duplicate lost text or reused identity")
+        let copy = reopened.document
+        await reopened.removeLetter(copy)
+        try check(reopened.trash.contains { $0.id == copy.id } && !reopened.library.contains { $0.id == copy.id }, "remove did not preserve recoverable letter")
+        let again = StudioModel(storageURL: directory)
+        try check(again.trash.contains { $0.id == copy.id }, "removed letter did not persist")
+        again.recoverLetter(copy)
+        try check(again.library.contains { $0.id == copy.id } && again.trash.isEmpty, "recovery failed")
+        again.updateTypedText("Typing through the editor")
+        await again.undoText()
+        try check(again.document.text != "Typing through the editor", "typed edit absent from app undo")
+        again.document.text = Array(repeating: "A long letter with many memories and details. ", count: 160).joined()
+        try check(again.layout.pages.count >= 3, "long-letter fixture too short")
+        await again.editPage(2)
+        try check(again.showEditor && again.editorSelection == again.layout.pages[2].range, "page editor did not select the requested passage")
+        // An unreadable draft history must never be replaced with an empty one.
+        let draftFile = directory.appendingPathComponent("\(again.document.id).drafts")
+        let damaged = Data("preserve these bytes".utf8)
+        try damaged.write(to: draftFile)
+        again.loadDrafts()
+        try check(!again.keepDraft(), "corrupt draft history was overwritten")
+        let remaining = try Data(contentsOf: draftFile)
+        try check(remaining == damaged, "corrupt draft bytes changed")
+        print("PASS: persistent drafts, full restore/undo, typing undo, duplicate, recoverable removal, corruption preservation, page editing and Focus")
+    }
+
     static func run() async throws {
+        try await workflowRecovery()
+
         let editor = StudioModel(inMemory: true)
         editor.document.text = "Dear Alex. The quiet sea was beautiful."
         await editor.applyVoiceEdit("replace quiet with calm")

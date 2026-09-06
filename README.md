@@ -88,3 +88,13 @@ The desk now uses warm walnut, brass accents and an oxblood writing pad. **Paper
 **Fonts** now searches names and descriptive words (try “romantic”, “slanted” or “familiar”). Star a hand and enable **Favorites only** to narrow the collection. Favorites persist on this Mac. Search is a text filter, not semantic emotion analysis.
 
 **Quiet** in the rail immediately finishes visible ink animation, stops current readback, and suppresses subsequent reveal/transition motion. Dictation still updates the page immediately; explicit Read aloud remains available. This preference persists and complements macOS Reduce Motion. No decorative sound effects are added.
+
+### Navigation and revisions
+
+Use the control strip above the paper for Fit, Fit Width, percentages, or the page menu. Pinch to zoom; ⌘− / ⌘= zoom and ⌘0 fits the page. Zoom does not change printing size. Follow dictation is off by default; enable the trailing follow control to move to newly created pages.
+
+Each page's **Edit text** opens a larger editor at that passage. **Drafts** in the bottom bar keeps named versions across launches; restoring keeps a safety copy of the current letter first. These versions stay on this Mac. Export a `.letter` file for an independent backup.
+
+In **Letters**, sort by title or recent edit, and right-click to duplicate or move a letter to **Recently Removed**. Select that collection in the archive menu and click a letter to recover it. To rename a letter, open it and edit the title above the paper.
+
+The print preview now shows the generated PDF, including the paper color/texture option. Load the matching paper size and use 100% scale in the Mac print panel. See [the workflow audit](WORKFLOW-AUDIT.md) for remaining limitations and verification coverage.

@@ -101,6 +101,30 @@ import LetterCore
         try AppVerification.check(!model.showPaper, "Paper drawer Done did not respond")
         try await click(37, 752, window: window)
         try AppVerification.check(model.quietMode, "Quiet rail did not respond")
+        func ink(in view: NSView?) -> InkNSView? {
+            guard let view else { return nil }
+            if let ink = view as? InkNSView { return ink }
+            for child in view.subviews { if let found = ink(in: child) { return found } }
+            return nil
+        }
+        let initialWidth = ink(in: window.contentView)?.bounds.width ?? 0
+        try AppVerification.check(initialWidth > 0, "paper renderer missing")
+        try await click(271, 179, window: window)
+        let enlarged = ink(in: window.contentView)?.bounds.width ?? 0
+        try AppVerification.check(enlarged > initialWidth + 10, "Zoom in did not enlarge paper")
+        for _ in 0..<4 { try await click(271, 179, window: window) }
+        try capture("interaction-zoom", window: window)
+        try await click(311, 179, window: window)
+        let fitted = ink(in: window.contentView)?.bounds.width ?? 0
+        try AppVerification.check(abs(fitted - initialWidth) < 2, "Fit did not restore paper scale")
+        await model.editPage(0)
+        try await Task.sleep(for: .milliseconds(400))
+        try enter("Dear friend, edited through the spacious writing surface.", window: window)
+        try AppVerification.check(model.document.text.contains("spacious writing surface"), "large editor did not update letter")
+        try capture("interaction-editor", window: window)
+        try await click(660, 48, window: window)
+        try AppVerification.check(!model.showEditor, "editor Done did not close")
+        print("PASS: native zoom, fit, spacious editor typing and dismissal")
         print("PASS: native hand search/favorite, paper selection and Quiet control")
         print("PASS: native expression selection, resonance control, and reset")
         print("PASS: native mouse/text interaction — font selection, specimen editing, archive search and reopen")

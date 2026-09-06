@@ -5,6 +5,8 @@ struct FontGallery: View {
     @Bindable var model: StudioModel
     @State private var sample = "Dear you,\n\nSome things deserve a letter.\nA memory. A little gratitude.\n\nWith love,"
     @State private var editingSample = false
+    @State private var useLetter = false
+    @State private var customSample = ""
     @State private var query = ""
     @State private var favoritesOnly = false
     private var hands: [Handwriting] {
@@ -72,14 +74,23 @@ struct FontGallery: View {
                             .scrollContentBackground(.hidden).background(.clear)
                             .accessibilityLabel("Editable font specimen")
                     } else {
+                        ScrollView {
                         Button { editingSample = true } label: {
                             Text(sample.isEmpty ? "Your words go here." : sample)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                                 .contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityLabel("Edit font specimen").accessibilityValue(sample)
+                        }
                     }
                 }.font(.custom(model.document.handwriting.fontName, size: 24)).lineSpacing(4)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Toggle("Preview my letter", isOn: $useLetter).font(.system(size: 11))
+                    .onChange(of: useLetter) { _, value in
+                        if value { customSample = sample; sample = model.document.text }
+                        else { sample = customSample }
+                    }
+                Text("\(model.layout.pages.count) pages in this hand · Changes apply to your letter; Undo restores the previous hand.")
+                    .font(.system(size: 10)).foregroundStyle(Palette.muted).padding(.top, 8)
                 Button { editingSample.toggle() } label: {
                     Label(editingSample ? "Finish editing sample" : "Edit sample text", systemImage: editingSample ? "checkmark" : "pencil.tip")
                         .font(.system(size: 11))

@@ -58,7 +58,9 @@ struct InspectorView: View {
             Rectangle().fill(Palette.text.opacity(0.17)).frame(height: 0.5)
             VStack(alignment: .leading, spacing: 10) {
                 SmallLabel(text: "03 / Private notes").foregroundStyle(Palette.muted)
-                TextEditor(text: $model.document.notes)
+                Button("Open spacious editor", systemImage: "arrow.up.left.and.arrow.down.right") { Task { await model.editPage(0) } }
+                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Palette.text)
+            TextEditor(text: $model.document.notes)
                     .font(.system(size: 13)).lineSpacing(6).scrollContentBackground(.hidden)
                     .foregroundStyle(Palette.text).frame(minHeight: 95, maxHeight: 130)
                     .accessibilityLabel("Private reference notes")
@@ -112,6 +114,8 @@ struct InspectorView: View {
                 Text("Write here, or dictate. The page follows along.")
                     .font(.system(size: 11)).foregroundStyle(Palette.muted)
             }
+            Button("Open spacious editor", systemImage: "arrow.up.left.and.arrow.down.right") { Task { await model.editPage(0) } }
+                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Palette.text)
             TextEditor(text: Binding(get: { model.document.text }, set: { model.updateTypedText($0) }))
                 .font(.system(size: 14)).lineSpacing(7).scrollContentBackground(.hidden)
                 .foregroundStyle(Palette.text).padding(10)
