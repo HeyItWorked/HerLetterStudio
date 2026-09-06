@@ -18,7 +18,9 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try emptyLetterHasOnePrintablePage()
         try storagePreservesPreviousFileAfterFailedWrite()
         try rejectsFutureSchema()
-        print("PASS: 6 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema)")
+        try commandsRequireExplicitUnambiguousInput()
+        try bundledFontsResolve()
+        print("PASS: 8 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, fonts)")
     }
     static func speechHypothesesReplaceRatherThanDuplicate() throws {
         let base = "Dear friend,\n\n"
@@ -88,5 +90,20 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
             _ = try DocumentStorage.load(from: url)
             throw CheckFailure(description: "unsupported schema accepted")
         } catch is CocoaError {}
+    }
+    static func commandsRequireExplicitUnambiguousInput() throws {
+        try expect(VoiceCommand.parse("replace with love") == nil, "missing replacement target must not crash")
+        try expect(VoiceCommand.parse("replace with") == nil, "empty replacement must not crash")
+        try expect(VoiceCommand.replacing("sea", with: "mountain", in: "A season to remember.") == nil, "replacement must not alter a different word")
+        try expect(VoiceCommand.parse("New paragraph.") == .paragraph, "spoken punctuation")
+        try expect(VoiceCommand.parse("I thought we should print the letter") == nil, "ordinary prose triggers command")
+        try expect(VoiceCommand.parse("Replace the sea with the mountains.") == .replace("the sea", "the mountains"), "replace parsing")
+        try expect(VoiceCommand.replacing("sea", with: "mountains", in: "The sea was quiet.") == "The mountains was quiet.", "replacement rewrites other words")
+        try expect(VoiceCommand.replacing("sea", with: "mountains", in: "The sea, the sea.") == nil, "ambiguous replacement accepted")
+    }
+    @MainActor static func bundledFontsResolve() throws {
+        for style in Handwriting.allCases {
+            try expect(NSFont(name: style.fontName, size: 24) != nil, "Missing bundled handwriting: \(style.fontName)")
+        }
     }
 }
