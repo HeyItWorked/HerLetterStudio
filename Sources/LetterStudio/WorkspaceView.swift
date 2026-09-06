@@ -28,6 +28,7 @@ struct WorkspaceView: View {
         .frame(minWidth: 1020, minHeight: 720)
         .sheet(isPresented: $model.showPrint) { PrintPreview(model: model) }
         .sheet(isPresented: $model.showGuide) { GuideView(model: model) }
+        .sheet(isPresented: $model.showFonts) { FontGallery(model: model) }
         .alert("A little attention needed", isPresented: Binding(get: { model.error != nil || model.speech.error != nil }, set: { if !$0 { model.error = nil; model.speech.error = nil } })) {
             Button("OK") { model.error = nil; model.speech.error = nil }
         } message: { Text(model.error ?? model.speech.error ?? "") }
@@ -59,6 +60,8 @@ struct WorkspaceView: View {
                     .foregroundStyle(Palette.cream).textFieldStyle(.plain).accessibilityLabel("Letter title")
             }
             Spacer(minLength: 20)
+            Button { Task { await model.stopInput(); model.showFonts = true } } label: { Label("Fonts", systemImage: "textformat") }
+                .buttonStyle(StudioButton())
             Button { Task { await model.edit() } } label: { Label("Edit letter", systemImage: "pencil.line") }
                 .buttonStyle(StudioButton())
             Button {
@@ -116,8 +119,8 @@ struct WorkspaceView: View {
                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Palette.mist)
             }
             Spacer(minLength: 5)
-            Button { Task { await model.toggleCommand() } } label: {
-                Label("Command", systemImage: "text.bubble").font(.system(size: 11))
+            Button { model.panel = .voice } label: {
+                Label("Voice edit", systemImage: "text.bubble").font(.system(size: 11))
             }.buttonStyle(.plain).foregroundStyle(Palette.mist)
                 .help("Voice command: new paragraph, undo, read back, replace words, or print preview").accessibilityLabel("Voice command")
             if !model.document.text.isEmpty {
@@ -145,7 +148,7 @@ struct GuideView: View {
             Text("Begin with something true.").font(.system(size: 31, design: .serif)).foregroundStyle(Palette.text)
             Text("Create a letter with New, then add a recipient and a few notes. Begin dictation to speak, or open Writing to type. Your words appear on the page as you go.")
             Text("Materials lets you choose handwriting, ink, and stationery. Print opens the preview, PDF export, and your Mac's print panel. Your reference notes and photographs stay off the printed page.")
-            Text("For voice edits, click Command, speak, then click Apply command. Try “new paragraph”, “undo”, “read it back”, “print preview”, or “replace [words] with [new words]”.")
+            Text("For voice edits, open Voice edit, press Speak an edit, then Apply edit. You can also type an edit. Try “new paragraph”, “undo”, “read it back”, “print preview”, or “replace [words] with [new words]”.")
             Text("⌘N  New    ⌘E  Edit    ⇧⌘D  Dictate    ⌘P  Print    ⌘S  Save")
                 .font(.system(size: 11, design: .monospaced))
             Divider()

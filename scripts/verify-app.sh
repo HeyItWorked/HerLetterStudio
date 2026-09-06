@@ -2,7 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 app_binary="$PWD/build/Letter Studio.app/Contents/MacOS/LetterStudio"
-if [[ "${1:-ui}" == transition ]]; then
+if [[ "${1:-ui}" == voice-edit ]]; then
+  mkdir -p build/voice-edits
+  say -v Samantha -o build/voice-edits/replace.aiff 'Replace quiet with calm.'
+  say -v Samantha -o build/voice-edits/insert.aiff 'Insert blue before sea.'
+  say -v Samantha -o build/voice-edits/font.aiff 'Use Baskerville.'
+  say -v Samantha -o build/voice-edits/undo.aiff 'Undo the last change.'
+  "$app_binary" --verify-voice-edit "$PWD/build/voice-edits"
+elif [[ "${1:-ui}" == transition ]]; then
   "$app_binary" --qa-transition "$PWD/build/${2:-transition}" "${@:3}"
 elif [[ "${1:-ui}" == microphone ]]; then
   "$app_binary" --verify-microphone
@@ -18,4 +25,6 @@ else
   "$app_binary" --snapshot "$PWD/build/library.png" --library
   "$app_binary" --snapshot "$PWD/build/blank.png" --compact --blank
   "$app_binary" --snapshot "$PWD/build/print-preview.png" --print-preview
+  "$app_binary" --snapshot "$PWD/build/fonts.png" --fonts
+  "$app_binary" --snapshot "$PWD/build/voice-edit.png" --voice-edit --compact
 fi

@@ -21,6 +21,11 @@ import LetterCore
     var showLibrary = false
     var showPrint = false
     var showGuide = false
+    var showFonts = false
+    var commandInput = ""
+    var commandFeedback = "Say what you want to change."
+    var lastEditBefore = ""
+    var lastEditAfter = ""
     var includePaperColor = false
     var error: String?
     var saveStatus = "Saved on this Mac"
@@ -30,13 +35,21 @@ import LetterCore
     var commandMode = false
     var commandTranscript = ""
     let speech = SpeechController()
-    private var savedTextForUndo: String?
+    private struct Revision: Equatable {
+        var text: String
+        var font: Handwriting
+        var size: Double
+    }
+    private var undoStack: [Revision] = []
+    private var redoStack: [Revision] = []
+    private var resizingFont = false
+    private var revision: Revision { Revision(text: document.text, font: document.handwriting, size: document.fontSize) }
     private var saveTask: Task<Void, Never>?
     private var replayTask: Task<Void, Never>?
     private var inkTask: Task<Void, Never>?
     private let storage: URL?
     private let speaker = AVSpeechSynthesizer()
-    enum Panel: String, CaseIterable { case context = "Context", writing = "Writing", materials = "Materials" }
+    enum Panel: String, CaseIterable { case context = "Context", writing = "Writing", materials = "Materials", voice = "Voice Edit" }
 
     init(inMemory: Bool = false, storageURL: URL? = nil) {
         FontLibrary.register()
@@ -63,7 +76,8 @@ import LetterCore
         if !inMemory && loadError == nil { saveNow() }
     }
 
-    var canUndo: Bool { savedTextForUndo != nil }
+    var canUndo: Bool { undoStack.contains { $0 != revision } }
+    var canRedo: Bool { !redoStack.isEmpty }
     var isBusy: Bool { speech.state != .idle }
 
     func scheduleSave() {
@@ -98,7 +112,7 @@ import LetterCore
         await stopInput()
         guard saveNow() else { return }
         document = LetterDocument()
-        savedTextForUndo = nil
+        clearHistory()
         panel = .context
         showLibrary = false
         saveNow()
@@ -108,7 +122,7 @@ import LetterCore
         await stopInput()
         guard saveNow() else { return }
         document = library.first(where: { $0.id == letter.id }) ?? letter
-        savedTextForUndo = nil
+        clearHistory()
         showLibrary = false
     }
 
@@ -117,7 +131,7 @@ import LetterCore
         if isBusy { await speech.stop(); return }
         stopReplay()
         speaker.stopSpeaking(at: .immediate)
-        savedTextForUndo = document.text
+        rememberRevision()
         let base = document.text
         let documentID = document.id
         await speech.start { [weak self] transcript in
@@ -142,12 +156,14 @@ import LetterCore
         return saveNow()
     }
 
-    func toggleCommand() async {
+    func toggleCommand(audioFileURL: URL? = nil) async {
         if commandMode { await finishCommand(); return }
         await stopInput()
+        panel = .voice
+        commandFeedback = "Listening for your edit…"
         commandMode = true
         commandTranscript = ""
-        await speech.start { [weak self] text in self?.commandTranscript = text }
+        await speech.start(audioFileURL: audioFileURL) { [weak self] text in self?.commandTranscript = text }
         if speech.state == .idle { commandMode = false }
     }
 
@@ -157,29 +173,92 @@ import LetterCore
         let text = commandTranscript
         commandMode = false
         commandTranscript = ""
-        guard let command = VoiceCommand.parse(text) else {
-            error = "Try “new paragraph”, “undo”, “read it back”, “print preview”, or “replace [words] with [new words]”. Your letter hasn't changed."
+        commandInput = text
+        await applyVoiceEdit(text)
+    }
+
+    func applyVoiceEdit(_ input: String) async {
+        let documentID = document.id
+        await stopInput()
+        guard document.id == documentID else { return }
+        guard let command = VoiceCommand.parse(input) else {
+            commandFeedback = "I didn't recognize that edit. Try one of the examples below."
             return
         }
+        let before = document.text
         switch command {
+        case .undo: let available = canUndo; await undoText(); commandFeedback = available ? "Undid the last change." : "Nothing to undo yet."; return
+        case .redo: let available = canRedo; await redoText(); commandFeedback = available ? "Restored the change." : "Nothing to redo yet."; return
+        case .readBack: await readBack(); commandFeedback = "Reading your letter."; return
+        case .printPreview: showPrint = true; commandFeedback = "Ready to review for print."; return
+        case let .font(style): chooseFont(style); commandFeedback = "Font changed to \(style.name)."; return
+        case let .size(size): chooseFontSize(size)
+        case .larger: chooseFontSize(document.fontSize + 2)
+        case .smaller: chooseFontSize(document.fontSize - 2)
         case .paragraph:
-            savedTextForUndo = document.text
+            rememberRevision()
             document.text = document.text.trimmingCharacters(in: .whitespacesAndNewlines) + "\n\n"
-        case .undo: await undoText()
-        case .readBack: await readBack()
-        case .printPreview: showPrint = true
-        case let .replace(old, new):
-            guard let updated = VoiceCommand.replacing(old, with: new, in: document.text) else {
-                error = "I couldn't identify exactly one occurrence of “\(old)”. Choose Writing to make this edit precisely."
+        default:
+            guard let updated = command.editing(document.text) else {
+                commandFeedback = "No edit made. Use a phrase that appears exactly once, or check that there is text to remove."
                 return
             }
-            savedTextForUndo = document.text
+            rememberRevision()
             document.text = updated
         }
+        lastEditBefore = before
+        lastEditAfter = document.text
+        commandFeedback = "Applied: \(input)"
+    }
+
+    func fontSizeDrag(_ editing: Bool) {
+        if editing { rememberRevision() }
+        resizingFont = editing
+    }
+
+    func chooseFontSize(_ value: Double) {
+        let size = min(32, max(18, value))
+        guard document.fontSize != size else { return }
+        if !resizingFont { rememberRevision() }
+        document.fontSize = size
+    }
+
+    func chooseFont(_ font: Handwriting) {
+        guard document.handwriting != font else { return }
+        rememberRevision()
+        document.handwriting = font
+    }
+
+    private func rememberRevision(clearRedo: Bool = true) {
+        if undoStack.last != revision { undoStack.append(revision) }
+        if undoStack.count > 50 { undoStack.removeFirst() }
+        if clearRedo { redoStack.removeAll() }
+    }
+
+    private func clearHistory() {
+        resizingFont = false
+        undoStack.removeAll(); redoStack.removeAll()
+        lastEditBefore = ""; lastEditAfter = ""
+        commandInput = ""; commandFeedback = "Say what you want to change."
+    }
+
+    private func restore(_ state: Revision) {
+        lastEditBefore = document.text
+        lastEditAfter = state.text
+        document.text = state.text
+        document.handwriting = state.font
+        document.fontSize = state.size
+    }
+
+    func updateTypedText(_ text: String) {
+        guard text != document.text else { return }
+        redoStack.removeAll()
+        document.text = text
     }
 
     func receiveDictation(_ text: String) {
         guard text != document.text else { return }
+        redoStack.removeAll()
         let previousCount = Double(document.text.utf16.count)
         let position = visibleCharacters ?? previousCount
         document.text = text
@@ -212,15 +291,29 @@ import LetterCore
 
     func edit() async {
         await stopInput()
-        savedTextForUndo = document.text
+        rememberRevision(clearRedo: false)
         panel = .writing
     }
 
     func undoText() async {
+        let documentID = document.id
         await stopInput()
-        guard let previous = savedTextForUndo else { return }
-        savedTextForUndo = document.text
-        document.text = previous
+        guard document.id == documentID else { return }
+        while let previous = undoStack.popLast() {
+            guard previous != revision else { continue }
+            redoStack.append(revision)
+            restore(previous)
+            return
+        }
+    }
+
+    func redoText() async {
+        let documentID = document.id
+        await stopInput()
+        guard document.id == documentID else { return }
+        guard let next = redoStack.popLast() else { return }
+        undoStack.append(revision)
+        restore(next)
     }
 
     func readBack() async {
@@ -331,7 +424,7 @@ import LetterCore
             imported.id = UUID()
             guard saveNow() else { return }
             document = imported
-            savedTextForUndo = nil
+            clearHistory()
             saveNow()
         } catch { self.error = "This file isn't a supported Letter Studio document." }
     }

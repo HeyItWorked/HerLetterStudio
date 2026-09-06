@@ -1,15 +1,15 @@
 import Foundation
 
 public enum Handwriting: String, Codable, CaseIterable, Sendable {
-    case aurore, caveat, personal
+    case aurore, caveat, personal, baskerville, georgia, palatino, typewriter
     public var name: String {
-        switch self { case .aurore: "Aurore"; case .caveat: "Everyday"; case .personal: "Daydream" }
+        switch self { case .aurore: "Aurore"; case .caveat: "Everyday"; case .personal: "Daydream"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino"; case .typewriter: "Typewriter" }
     }
     public var fontName: String {
-        switch self { case .aurore: "LaBelleAurore"; case .caveat: "Caveat-Regular"; case .personal: "NothingYouCouldDo" }
+        switch self { case .aurore: "LaBelleAurore"; case .caveat: "Caveat-Regular"; case .personal: "NothingYouCouldDo"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino-Roman"; case .typewriter: "AmericanTypewriter" }
     }
     public var subtitle: String {
-        switch self { case .aurore: "Flowing & intimate"; case .caveat: "Easy & familiar"; case .personal: "Open & unhurried" }
+        switch self { case .aurore: "Flowing & intimate"; case .caveat: "Easy & familiar"; case .personal: "Open & unhurried"; case .baskerville: "Elegant correspondence"; case .georgia: "Warm & readable"; case .palatino: "Classic & literary"; case .typewriter: "A personal dispatch" }
     }
 }
 

@@ -8,7 +8,60 @@ enum VerificationFailure: Error { case failed(String) }
         if !condition() { throw VerificationFailure.failed(message) }
     }
 
+    static func voiceEditing(directory: URL) async throws {
+        let model = StudioModel(inMemory: true)
+        model.document.text = "Dear Alex. The quiet sea was beautiful."
+        for name in ["replace", "insert", "font", "undo"] {
+            await model.toggleCommand(audioFileURL: directory.appendingPathComponent(name + ".aiff"))
+            let deadline = Date().addingTimeInterval(30)
+            while model.speech.state != .idle && Date() < deadline { try await Task.sleep(for: .milliseconds(30)) }
+            try check(model.speech.state == .idle && model.speech.error == nil, "speech fixture failed for \(name)")
+            await model.toggleCommand()
+            switch name {
+            case "replace": try check(model.document.text.contains("calm sea"), "spoken replacement: \(model.commandInput)")
+            case "insert": try check(model.document.text.contains("calm blue sea"), "spoken insertion: \(model.commandInput)")
+            case "font": try check(model.document.handwriting == .baskerville, "spoken font: \(model.commandInput)")
+            default: try check(model.document.handwriting == .aurore, "spoken undo: \(model.commandInput)")
+            }
+            print("PASS: spoken edit — \(model.commandInput) → \(model.commandFeedback)")
+        }
+    }
+
     static func run() async throws {
+        let editor = StudioModel(inMemory: true)
+        editor.document.text = "Dear Alex. The quiet sea was beautiful."
+        await editor.applyVoiceEdit("replace quiet with calm")
+        try check(editor.document.text == "Dear Alex. The calm sea was beautiful.", "voice replace did not apply")
+        await editor.applyVoiceEdit("insert blue before sea")
+        try check(editor.document.text.contains("calm blue sea"), "voice insertion did not apply")
+        await editor.applyVoiceEdit("use Baskerville")
+        try check(editor.document.handwriting == .baskerville && editor.layout.document.handwriting == .baskerville, "voice font did not reach page")
+        await editor.undoText()
+        try check(editor.document.handwriting == .aurore, "undo did not restore font")
+        await editor.undoText()
+        try check(editor.document.text == "Dear Alex. The calm sea was beautiful.", "multi-step undo lost edit")
+        await editor.redoText()
+        try check(editor.document.text.contains("calm blue sea"), "redo did not restore insertion")
+        await editor.applyVoiceEdit("delete the last sentence")
+        try check(editor.document.text == "Dear Alex.", "voice sentence deletion")
+        await editor.undoText()
+        try check(editor.document.text.contains("calm blue sea"), "destructive edit not undoable")
+        await editor.applyVoiceEdit("replace missing with something")
+        try check(editor.document.text.contains("calm blue sea") && editor.commandFeedback.contains("No edit"), "failed edit changed document or lacked feedback")
+        await editor.applyVoiceEdit("set font size to 22")
+        try check(editor.document.fontSize == 22, "voice size did not apply")
+        await editor.undoText()
+        editor.chooseFontSize(28)
+        try check(!editor.canRedo, "manual font size did not invalidate stale redo")
+        editor.fontSizeDrag(true)
+        editor.chooseFontSize(25)
+        editor.chooseFontSize(24)
+        editor.fontSizeDrag(false)
+        await editor.undoText()
+        try check(editor.document.fontSize == 28, "slider drag should undo as one change")
+        await editor.newLetter()
+        try check(!editor.canUndo && !editor.canRedo && editor.commandInput.isEmpty, "new letter inherited edit history")
+        print("PASS: voice editing, font selection, multi-step undo/redo, feedback, history isolation")
         let animation = StudioModel(inMemory: true)
         animation.document.text = ""
         animation.receiveDictation("dear Alex, I remember the afternoon by the water.")

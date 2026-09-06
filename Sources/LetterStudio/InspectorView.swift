@@ -25,6 +25,7 @@ struct InspectorView: View {
                     case .context: contextPanel
                     case .writing: writingPanel
                     case .materials: materialsPanel
+                    case .voice: VoiceEditPanel(model: model)
                     }
                 }.padding(24)
             }.scrollIndicators(.visible)
@@ -111,7 +112,7 @@ struct InspectorView: View {
                 Text("Write here, or dictate. The page follows along.")
                     .font(.system(size: 11)).foregroundStyle(Palette.muted)
             }
-            TextEditor(text: $model.document.text)
+            TextEditor(text: Binding(get: { model.document.text }, set: { model.updateTypedText($0) }))
                 .font(.system(size: 14)).lineSpacing(7).scrollContentBackground(.hidden)
                 .foregroundStyle(Palette.text).padding(10)
                 .frame(minHeight: 340).background(.white.opacity(0.38))
@@ -122,6 +123,8 @@ struct InspectorView: View {
                 Spacer()
                 Button("Undo", systemImage: "arrow.uturn.backward") { Task { await model.undoText() } }.disabled(!model.canUndo)
             }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Palette.text)
+            Button("Edit with your voice", systemImage: "waveform") { model.panel = .voice }
+                .buttonStyle(.bordered).tint(Palette.text)
             Text("Keyboard edits support ⌘Z. Dictation appends at the end of your letter.")
                 .font(.system(size: 10)).foregroundStyle(Palette.muted)
         }
@@ -130,29 +133,21 @@ struct InspectorView: View {
     private var materialsPanel: some View {
         Group {
             VStack(alignment: .leading, spacing: 14) {
-                SmallLabel(text: "The handwriting").foregroundStyle(Palette.muted)
-                ForEach(Handwriting.allCases, id: \.self) { style in
-                    Button { model.document.handwriting = style } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(style.name).font(.custom(style.fontName, size: 25))
-                                Text(style.subtitle).font(.system(size: 10)).foregroundStyle(Palette.muted)
-                            }
-                            Spacer()
-                            if model.document.handwriting == style { Image(systemName: "checkmark").font(.system(size: 11)) }
-                        }.foregroundStyle(Palette.text).padding(12)
-                            .background(model.document.handwriting == style ? .white.opacity(0.6) : .white.opacity(0.12))
-                            .overlay(Rectangle().stroke(Palette.text.opacity(model.document.handwriting == style ? 0.25 : 0.07), lineWidth: 0.5))
-                    }.buttonStyle(.plain)
-                }
+                SmallLabel(text: "Lettering").foregroundStyle(Palette.muted)
+                Text(model.document.handwriting.name).font(.custom(model.document.handwriting.fontName, size: 28)).foregroundStyle(Palette.text)
+                Text(model.document.handwriting.subtitle).font(.system(size: 11)).foregroundStyle(Palette.muted)
+                Button("Browse 7 fonts", systemImage: "textformat") {
+                    Task { await model.stopInput(); model.showFonts = true }
+                }.buttonStyle(.bordered).tint(Palette.text)
             }
+
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     SmallLabel(text: "Size").foregroundStyle(Palette.muted)
                     Spacer()
                     Text("\(Int(model.document.fontSize)) pt").font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.text)
                 }
-                Slider(value: $model.document.fontSize, in: 18...32, step: 1).tint(Palette.text).accessibilityLabel("Handwriting size")
+                Slider(value: Binding(get: { model.document.fontSize }, set: { model.chooseFontSize($0) }), in: 18...32, step: 1, onEditingChanged: { model.fontSizeDrag($0) }).tint(Palette.text).accessibilityLabel("Handwriting size")
             }
             VStack(alignment: .leading, spacing: 14) {
                 SmallLabel(text: "Ink").foregroundStyle(Palette.muted)

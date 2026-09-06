@@ -8,6 +8,13 @@ import LetterCore
     private var terminationPending = false
     func applicationDidFinishLaunching(_ notification: Notification) {
         let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "--verify-voice-edit"), arguments.count > index + 1 {
+            Task {
+                do { try await AppVerification.voiceEditing(directory: URL(fileURLWithPath: arguments[index + 1])); exit(0) }
+                catch { print("FAIL: \(error)"); exit(1) }
+            }
+            return
+        }
         if arguments.contains("--verify-microphone") {
             Task {
                 do { try await AppVerification.microphone(); exit(0) }
@@ -63,6 +70,8 @@ import LetterCore
             }
         }
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
+            if arguments.contains("--fonts") { model.showFonts = true }
+            if arguments.contains("--voice-edit") { model.panel = .voice }
             if arguments.contains("--materials") { model.panel = .materials; model.document.stationery = .blue }
             if arguments.contains("--writing") { model.panel = .writing }
             if arguments.contains("--library") { model.showLibrary = true }

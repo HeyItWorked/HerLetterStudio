@@ -19,8 +19,9 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try storagePreservesPreviousFileAfterFailedWrite()
         try rejectsFutureSchema()
         try commandsRequireExplicitUnambiguousInput()
+        try expandedVoiceEditing()
         try bundledFontsResolve()
-        print("PASS: 8 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, fonts)")
+        print("PASS: 9 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, expanded edits, fonts)")
     }
     static func speechHypothesesReplaceRatherThanDuplicate() throws {
         let base = "Dear friend,\n\n"
@@ -100,6 +101,24 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try expect(VoiceCommand.parse("Replace the sea with the mountains.") == .replace("the sea", "the mountains"), "replace parsing")
         try expect(VoiceCommand.replacing("sea", with: "mountains", in: "The sea was quiet.") == "The mountains was quiet.", "replacement rewrites other words")
         try expect(VoiceCommand.replacing("sea", with: "mountains", in: "The sea, the sea.") == nil, "ambiguous replacement accepted")
+    }
+    static func expandedVoiceEditing() throws {
+        try expect(VoiceCommand.parse("Change the sea to the mountains.") == .replace("the sea", "the mountains"), "natural replacement alias")
+        try expect(VoiceCommand.parse("Delete the last sentence.")?.editing("Dear Alex. I miss you.") == "Dear Alex.", "last sentence edit")
+        try expect(VoiceCommand.parse("Delete quiet")?.editing("The quiet sea.") == "The sea.", "phrase deletion spacing")
+        try expect(VoiceCommand.parse("Delete sea")?.editing("The quiet sea.") == "The quiet.", "deletion left a space before punctuation")
+        try expect(VoiceCommand.parse("Delete sea")?.editing("The sea and the sea.") == nil, "ambiguous delete must leave text alone")
+        try expect(VoiceCommand.parse("Insert warm after the")?.editing("In the sunlight.") == "In the warm sunlight.", "insert after")
+        try expect(VoiceCommand.parse("Insert dear before Alex")?.editing("Hello Alex.") == "Hello dear Alex.", "insert before")
+        try expect(VoiceCommand.parse("Delete the last paragraph")?.editing("First.\n\nSecond.") == "First.", "paragraph deletion")
+        try expect(VoiceCommand.parse("Delete the last paragraph")?.editing("First.\r\nLine two.\r\n\r\nSecond.\r\nMore.") == "First.\r\nLine two.", "Windows paragraph deletion removed extra text")
+        try expect(VoiceCommand.parse("Use Baskerville") == .font(.baskerville), "voice font selection")
+        try expect(VoiceCommand.parse("Undo the last change.") == .undo, "explicit spoken undo")
+        try expect(VoiceCommand.parse("Set font size to 22") == .size(22), "voice size")
+        try expect(VoiceCommand.parse("Set font size to 200") == nil, "invalid size accepted")
+        try expect(VoiceCommand.parse("insert after love") == nil, "malformed insertion")
+        try expect(VoiceCommand.parse("delete") == nil, "empty deletion")
+        try expect(VoiceCommand.parse("I want to delete the last sentence") == nil, "normal prose mistaken for edit")
     }
     @MainActor static func bundledFontsResolve() throws {
         for style in Handwriting.allCases {
