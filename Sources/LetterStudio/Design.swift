@@ -2,14 +2,15 @@ import SwiftUI
 import LetterCore
 
 enum Palette {
-    static let desk = Color(hex: 0x244D50)
-    static let deep = Color(hex: 0x15383B)
-    static let mist = Color(hex: 0xA7C4BD)
+    static let desk = Color(hex: 0x254643)
+    static let deep = Color(hex: 0x102B2C)
+    static let mist = Color(hex: 0xD0DBD0)
     static let cream = Color(hex: 0xF4EFDF)
-    static let panel = Color(hex: 0xE9E9DE)
-    static let text = Color(hex: 0x304B49)
-    static let muted = Color(hex: 0x62716A)
-    static let accent = Color(hex: 0xBA6550)
+    static let panel = Color(hex: 0xEEEADD)
+    static let text = Color(hex: 0x293F39)
+    static let muted = Color(hex: 0x626B5D)
+    static let brass = Color(hex: 0xE1CDA6)
+    static let accent = Color(hex: 0xA5533D)
 }
 
 extension Color {
@@ -36,14 +37,43 @@ struct SmallLabel: View {
 struct StudioButton: ButtonStyle {
     var filled = false
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 12, weight: .medium))
-            .padding(.horizontal, 16).padding(.vertical, 11)
+        InstrumentSurface(filled: filled, pressed: configuration.isPressed) { configuration.label }
+    }
+}
+
+private struct InstrumentSurface<Content: View>: View {
+    var filled: Bool
+    var pressed: Bool
+    @ViewBuilder var content: () -> Content
+    @State private var hovered = false
+    @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        content().font(.custom("AvenirNext-Medium", size: 12))
+            .padding(.horizontal, 17).padding(.vertical, 12)
             .foregroundStyle(filled ? Palette.deep : Palette.cream)
-            .background(filled ? Palette.cream : Color.white.opacity(configuration.isPressed ? 0.15 : 0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 5))
-            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.white.opacity(0.16), lineWidth: 0.5))
-            .opacity(configuration.isPressed ? 0.75 : 1)
+            .background(filled ? Palette.cream.opacity(hovered ? 1 : 0.94) : Color.white.opacity(hovered ? 0.09 : 0.025))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+            .overlay(RoundedRectangle(cornerRadius: 3).stroke(filled ? Color.white.opacity(0.4) : Palette.cream.opacity(hovered ? 0.35 : 0.16), lineWidth: 0.6))
+            .shadow(color: .black.opacity(filled ? 0.12 : 0), radius: 4, y: 2)
+            .scaleEffect(pressed && !reduceMotion ? 0.98 : 1)
+            .opacity(enabled ? 1 : 0.4)
+            .onHover { hovered = $0 }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: hovered)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.1), value: pressed)
+    }
+}
+
+struct FolioButton: ButtonStyle {
+    var primary = false
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.font(.custom("AvenirNext-Medium", size: 12))
+            .padding(.horizontal, 14).padding(.vertical, 10)
+            .foregroundStyle(primary ? Palette.cream : Palette.text)
+            .background(primary ? Palette.text : Palette.text.opacity(configuration.isPressed ? 0.08 : 0.015))
+            .overlay(Rectangle().stroke(Palette.text.opacity(primary ? 1 : 0.25), lineWidth: 0.6))
+            .opacity(enabled ? configuration.isPressed ? 0.8 : 1 : 0.4)
     }
 }
 
@@ -52,17 +82,21 @@ struct RailButton: View {
     let title: String
     var selected = false
     let action: () -> Void
+    @State private var hovered = false
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 7) {
-                Image(systemName: symbol).font(.system(size: 19, weight: .light))
-                Text(title).font(.system(size: 9))
+            VStack(spacing: 8) {
+                Image(systemName: symbol).font(.system(size: 18, weight: .light))
+                Text(title).font(.custom("AvenirNext-Medium", size: 9))
             }
-            .foregroundStyle(selected ? Palette.cream : Palette.mist)
-            .frame(width: 60, height: 58)
-            .background(selected ? Color.white.opacity(0.08) : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: 5))
-        }.buttonStyle(.plain).help(title).accessibilityLabel(title)
+            .foregroundStyle(selected || hovered ? Palette.cream : Palette.mist)
+            .frame(width: 66, height: 62)
+            .contentShape(Rectangle())
+            .background(Color.white.opacity(selected ? 0.065 : hovered ? 0.035 : 0))
+            .overlay(alignment: .leading) {
+                if selected { Rectangle().fill(Palette.brass).frame(width: 2, height: 25) }
+            }
+        }.buttonStyle(.plain).onHover { hovered = $0 }.help(title).accessibilityLabel(title)
     }
 }
 
@@ -70,12 +104,16 @@ struct DeskBackground: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                LinearGradient(colors: [Color(hex: 0x527A76), Palette.desk, Palette.deep], startPoint: .topLeading, endPoint: .bottomTrailing)
-                ForEach(0..<5) { index in
-                    RoundedRectangle(cornerRadius: 3)
-                        .stroke(Color(hex: 0x9EBDB3).opacity(0.05 + Double(index) * 0.008), lineWidth: 8)
-                        .padding(CGFloat(index) * 12 + 14)
+                LinearGradient(colors: [Color(hex: 0x3D5E55), Palette.desk, Palette.deep], startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [Color(hex: 0xA9B49A).opacity(0.15), .clear], center: UnitPoint(x: 0.25, y: 0.28), startRadius: 30, endRadius: proxy.size.width * 0.65)
+                Canvas { context, size in
+                    for index in 0..<2500 {
+                        let x = CGFloat((index * 137 + 43) % 1999) / 1999 * size.width
+                        let y = CGFloat((index * 293 + 11) % 1987) / 1987 * size.height
+                        context.fill(Path(CGRect(x: x, y: y, width: 0.6, height: 0.6)), with: .color(.white.opacity(0.035)))
+                    }
                 }
+                LinearGradient(colors: [.black.opacity(0.12), .clear, .black.opacity(0.12)], startPoint: .leading, endPoint: .trailing)
             }
         }.allowsHitTesting(false).accessibilityHidden(true)
     }

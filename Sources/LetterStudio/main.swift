@@ -40,7 +40,7 @@ import LetterCore
         }
         let snapshotIndex = arguments.firstIndex(of: "--snapshot")
         let transitionIndex = arguments.firstIndex(of: "--qa-transition")
-        model = StudioModel(inMemory: snapshotIndex != nil || transitionIndex != nil)
+        model = StudioModel(inMemory: snapshotIndex != nil || transitionIndex != nil || arguments.contains("--verify-ui"))
         let compact = arguments.contains("--compact")
         let size = NSSize(width: compact ? 1060 : 1380, height: compact ? 760 : 930)
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
@@ -48,17 +48,23 @@ import LetterCore
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
-        window.backgroundColor = NSColor(rgb: 0x15383B)
+        window.backgroundColor = NSColor(rgb: 0x102B2C)
         window.minSize = NSSize(width: 1020, height: 760)
         window.contentView = NSHostingView(rootView: WorkspaceView(model: model).padding(.top, 25).background(Palette.deep))
         window.center()
-        if snapshotIndex == nil && transitionIndex == nil { window.setFrameAutosaveName("LetterStudioMain") }
+        if snapshotIndex == nil && transitionIndex == nil && !arguments.contains("--verify-ui") { window.setFrameAutosaveName("LetterStudioMain") }
         makeMenu()
         NSApp.applicationIconImage = appIcon()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         Task { try? await Task.sleep(for: .milliseconds(150)); window.makeFirstResponder(nil) }
         print("Letter Studio window: \(window.windowNumber)")
+        if arguments.contains("--verify-ui") {
+            Task {
+                do { try await InterfaceQA.run(model: model, window: window); exit(0) }
+                catch { print("FAIL: \(error)"); exit(1) }
+            }
+        }
         if let transitionIndex, arguments.count > transitionIndex + 1 {
             let directory = URL(fileURLWithPath: arguments[transitionIndex + 1])
             Task {
@@ -70,6 +76,8 @@ import LetterCore
             }
         }
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
+            if arguments.contains("--focus") { model.focusMode = true }
+            if arguments.contains("--preparing") { model.speech.state = .preparing; model.speech.status = "Preparing on-device dictation…" }
             if arguments.contains("--fonts") { model.showFonts = true }
             if arguments.contains("--voice-edit") { model.panel = .voice }
             if arguments.contains("--materials") { model.panel = .materials; model.document.stationery = .blue }

@@ -11,13 +11,13 @@ struct InspectorView: View {
                         if panel == .writing { Task { await model.edit() } }
                         else { model.panel = panel }
                     } label: {
-                        VStack(spacing: 13) {
+                        VStack(spacing: 14) {
                             Text(panel.rawValue).font(.system(size: 11, weight: model.panel == panel ? .semibold : .regular))
                             Rectangle().fill(model.panel == panel ? Palette.accent : .clear).frame(height: 2)
                         }.frame(maxWidth: .infinity)
                     }.buttonStyle(.plain)
                 }
-            }.foregroundStyle(Palette.text).padding(.top, 22)
+            }.foregroundStyle(Palette.text).padding(.top, 20)
             Divider().overlay(Palette.text.opacity(0.08))
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -27,35 +27,35 @@ struct InspectorView: View {
                     case .materials: materialsPanel
                     case .voice: VoiceEditPanel(model: model)
                     }
-                }.padding(24)
+                }.padding(22)
             }.scrollIndicators(.visible)
             HStack(spacing: 7) {
                 Image(systemName: "externaldrive").font(.system(size: 10))
                 Text(model.saveStatus).font(.system(size: 10))
             }.foregroundStyle(Palette.muted).padding(20)
         }
-        .background(Palette.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 3))
-        .overlay(RoundedRectangle(cornerRadius: 3).stroke(.white.opacity(0.3), lineWidth: 0.5))
+        .background(LinearGradient(colors: [Palette.cream, Palette.panel], startPoint: .topLeading, endPoint: .bottomTrailing))
+        .clipShape(RoundedRectangle(cornerRadius: 2))
+        .overlay(RoundedRectangle(cornerRadius: 2).stroke(.white.opacity(0.3), lineWidth: 0.5))
     }
 
     private var contextPanel: some View {
         Group {
             VStack(alignment: .leading, spacing: 10) {
-                SmallLabel(text: "The person behind the words").foregroundStyle(Palette.muted)
+                SmallLabel(text: "01 / The recipient").foregroundStyle(Palette.muted)
                 TextField("Who is this for?", text: $model.document.recipient)
-                    .font(.system(size: 26, design: .serif)).textFieldStyle(.plain)
+                    .font(.custom("Baskerville", size: 28)).textFieldStyle(.plain)
                     .foregroundStyle(Palette.text).accessibilityLabel("Recipient")
             }
             VStack(alignment: .leading, spacing: 8) {
-                SmallLabel(text: "The occasion").foregroundStyle(Palette.muted)
+                SmallLabel(text: "02 / Occasion").foregroundStyle(Palette.muted)
                 TextField("Just because", text: $model.document.occasion)
                     .font(.system(size: 12)).textFieldStyle(.plain).foregroundStyle(Palette.text)
                     .accessibilityLabel("Occasion")
             }
             Rectangle().fill(Palette.text.opacity(0.17)).frame(height: 0.5)
             VStack(alignment: .leading, spacing: 10) {
-                SmallLabel(text: "Things to remember").foregroundStyle(Palette.muted)
+                SmallLabel(text: "03 / Private notes").foregroundStyle(Palette.muted)
                 TextEditor(text: $model.document.notes)
                     .font(.system(size: 13)).lineSpacing(6).scrollContentBackground(.hidden)
                     .foregroundStyle(Palette.text).frame(minHeight: 95, maxHeight: 130)
@@ -65,7 +65,7 @@ struct InspectorView: View {
             }
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    SmallLabel(text: "A few memories").foregroundStyle(Palette.muted)
+                    SmallLabel(text: "04 / References").foregroundStyle(Palette.muted)
                     Spacer()
                     Button { model.importPhotos() } label: { Image(systemName: "plus").font(.system(size: 13)) }
                         .buttonStyle(.plain).help("Add reference photographs").disabled(model.document.photos.count >= 12)
@@ -79,11 +79,9 @@ struct InspectorView: View {
                                 Text("Bring a photograph").font(.system(size: 10))
                             }.foregroundStyle(Palette.muted).padding(.bottom, 12).padding(.top, 3)
                         }.background(Color(hex: 0xF7F5EB))
-                            .rotationEffect(.degrees(-2))
+                            .rotationEffect(.degrees(-1))
                             .shadow(color: .black.opacity(0.11), radius: 5, x: 1, y: 4)
                     }.buttonStyle(.plain).padding(.horizontal, 5)
-                    Text("A little context helps the words find you.")
-                        .font(.system(size: 11, design: .serif)).italic().foregroundStyle(Palette.muted)
                 } else {
                     ForEach($model.document.photos) { $photo in
                         VStack(spacing: 8) {
@@ -108,7 +106,7 @@ struct InspectorView: View {
         Group {
             VStack(alignment: .leading, spacing: 8) {
                 SmallLabel(text: "Make it yours").foregroundStyle(Palette.muted)
-                Text("Every word matters.").font(.system(size: 23, design: .serif)).foregroundStyle(Palette.text)
+                Text("Every word matters.").font(.custom("Baskerville", size: 27)).foregroundStyle(Palette.text)
                 Text("Write here, or dictate. The page follows along.")
                     .font(.system(size: 11)).foregroundStyle(Palette.muted)
             }

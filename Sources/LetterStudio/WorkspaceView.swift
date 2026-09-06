@@ -10,16 +10,19 @@ struct WorkspaceView: View {
             ZStack {
                 DeskBackground()
                 VStack(spacing: 0) {
-                    header.padding(.horizontal, 36).padding(.top, 25).padding(.bottom, 24)
-                    HStack(alignment: .top, spacing: 30) {
+                    header.padding(.horizontal, 36).padding(.top, 20).padding(.bottom, 22)
+                    HStack(alignment: .top, spacing: 32) {
                         writingDesk
                         if !model.focusMode {
                             InspectorView(model: model).frame(width: 286)
-                                .padding(.top, 15).padding(.bottom, 16)
+                                .shadow(color: .black.opacity(0.16), radius: 18, x: 5, y: 12)
+                                .padding(.top, 12).padding(.bottom, 20)
                                 .transition(.opacity.combined(with: .move(edge: .trailing)))
                         }
                     }.padding(.horizontal, 36)
-                    footer.padding(.horizontal, 36).padding(.top, 15).padding(.bottom, 23)
+                    footer.padding(.horizontal, 24).padding(.vertical, 15)
+                        .background(Palette.deep.opacity(0.56))
+                        .overlay(alignment: .top) { Rectangle().fill(Palette.brass.opacity(0.2)).frame(height: 0.5) }
                 }
                 if model.showLibrary { LibraryView(model: model).transition(.opacity) }
             }
@@ -38,7 +41,8 @@ struct WorkspaceView: View {
 
     private var rail: some View {
         VStack(spacing: 12) {
-            ThreadMark(size: 27).foregroundStyle(Palette.cream).padding(.top, 29).padding(.bottom, 28)
+            Text("L.").font(.custom("Baskerville-Italic", size: 37)).foregroundStyle(Palette.brass)
+                .accessibilityLabel("Letter Studio").padding(.top, 24).padding(.bottom, 22)
             RailButton(symbol: "square.and.pencil", title: "Write", selected: !model.showLibrary) { model.showLibrary = false }
             RailButton(symbol: "tray.full", title: "Letters", selected: model.showLibrary) { model.showLibrary.toggle() }
             RailButton(symbol: "plus", title: "New") { Task { await model.newLetter() } }
@@ -47,22 +51,23 @@ struct WorkspaceView: View {
             RailButton(symbol: "questionmark.circle", title: "Guide") {
                 model.showGuide = true
             }
-            SmallLabel(text: "LS / 01").foregroundStyle(Palette.mist.opacity(0.6)).padding(.vertical, 20)
+            SmallLabel(text: "PRIVATE").foregroundStyle(Palette.mist).padding(.vertical, 20)
         }.frame(width: 76).background(Palette.deep)
+            .overlay(alignment: .trailing) { Rectangle().fill(Palette.brass.opacity(0.13)).frame(width: 0.5) }
     }
 
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 10) {
-                SmallLabel(text: "Letter Studio  /  Personal correspondence").foregroundStyle(Palette.mist)
+                SmallLabel(text: "Letter Studio   /   Correspondence").foregroundStyle(Palette.brass)
                 TextField("Give this letter a name", text: $model.document.title)
-                    .font(.system(size: 28, weight: .regular, design: .serif))
+                    .font(.custom("Baskerville", size: 34))
                     .foregroundStyle(Palette.cream).textFieldStyle(.plain).accessibilityLabel("Letter title")
             }
             Spacer(minLength: 20)
             Button { Task { await model.stopInput(); model.showFonts = true } } label: { Label("Fonts", systemImage: "textformat") }
                 .buttonStyle(StudioButton())
-            Button { Task { await model.edit() } } label: { Label("Edit letter", systemImage: "pencil.line") }
+            Button { Task { await model.edit() } } label: { Label("Edit", systemImage: "pencil.line") }
                 .buttonStyle(StudioButton())
             Button {
                 Task { await model.stopInput(); model.showPrint = true }
@@ -80,17 +85,16 @@ struct WorkspaceView: View {
                         ForEach(model.layout.pages.indices, id: \.self) { index in
                             VStack(spacing: 13) {
                                 HStack {
-                                    SmallLabel(text: index == 0 ? "A letter, taking shape" : "The thought continues")
+                                    SmallLabel(text: index == 0 ? "Personal letter" : "Continued")
                                     Spacer()
                                     Text(String(format: "%02d", index + 1)).font(.system(size: 10, design: .monospaced))
-                                }.foregroundStyle(Palette.mist.opacity(0.85))
+                                }.foregroundStyle(Palette.mist)
                                 ZStack {
-                                    Rectangle().fill(Color(hex: model.document.stationery.hex).opacity(0.4))
-                                        .rotationEffect(.degrees(-1.2)).offset(x: -7, y: 7)
-                                    Rectangle().fill(Color(hex: model.document.stationery.hex).opacity(0.6))
-                                        .rotationEffect(.degrees(0.7)).offset(x: 4, y: 3)
+                                    Rectangle().fill(Color(hex: model.document.stationery.hex).opacity(0.75))
+                                        .offset(x: 3, y: 4)
+                                        .shadow(color: .black.opacity(0.15), radius: 2, y: 2)
                                     PaperView(layout: model.layout, page: index, width: paperWidth, visibleCharacters: model.visibleCharacters)
-                                        .shadow(color: .black.opacity(0.22), radius: 18, x: 2, y: 15)
+                                        .shadow(color: .black.opacity(0.25), radius: 22, x: 4, y: 16)
                                 }.frame(width: paperWidth, height: paperWidth * model.layout.size.height / model.layout.size.width)
                                     .onTapGesture { Task { await model.edit() } }
                             }.frame(width: paperWidth).id(index)
@@ -98,24 +102,24 @@ struct WorkspaceView: View {
                     }.frame(maxWidth: .infinity).padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 28)
                 }.scrollIndicators(.hidden)
                     .onChange(of: model.layout.pages.count) { _, count in
-                        if model.isBusy { withAnimation { scroll.scrollTo(count - 1, anchor: .bottom) } }
+                        if model.isBusy { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.3)) { scroll.scrollTo(count - 1, anchor: .bottom) } }
                     }
             }
         }
     }
 
     private var footer: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 18) {
             Button { Task { await model.toggleDictation() } } label: {
                 HStack(spacing: 12) {
                     Image(systemName: model.isBusy ? "stop.fill" : "mic.fill").font(.system(size: 14))
                     Text(model.speech.state == .preparing ? "Preparing…" : model.speech.state == .finishing ? "Finishing…" : model.commandMode ? "Apply command" : model.isBusy ? "Finish dictation" : "Begin dictation")
-                }.frame(minWidth: 150)
+                }.frame(minWidth: 137)
             }.buttonStyle(StudioButton(filled: true)).disabled(model.speech.state == .finishing)
             VStack(alignment: .leading, spacing: 5) {
                 Text(model.commandMode ? (model.commandTranscript.isEmpty ? "Say a command, then apply it." : model.commandTranscript) : model.speech.status)
                     .font(.system(size: 11)).foregroundStyle(Palette.cream.opacity(0.9)).lineLimit(2)
-                Text(model.isBusy ? "Your microphone is on · English" : "⇧⌘D  ·  On-device dictation")
+                Text(model.speech.state == .preparing ? "Preparing English dictation" : model.speech.state == .finishing ? "Finishing your last words" : model.isBusy ? "Your microphone is on · English" : "⇧⌘D  ·  On-device dictation")
                     .font(.system(size: 9, design: .monospaced)).foregroundStyle(Palette.mist)
             }
             Spacer(minLength: 5)
@@ -133,7 +137,7 @@ struct WorkspaceView: View {
                 Text("\(model.document.wordCount) words  ·  \(model.layout.pages.count) \(model.layout.pages.count == 1 ? "page" : "pages")")
                     .font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.mist)
                 Text("\(model.document.paper.name)  /  \(model.document.handwriting.name)")
-                    .font(.system(size: 9)).foregroundStyle(Palette.mist.opacity(0.8))
+                    .font(.system(size: 9)).foregroundStyle(Palette.mist)
             }
         }
     }
@@ -163,39 +167,84 @@ struct GuideView: View {
 struct LibraryView: View {
     @Bindable var model: StudioModel
     @State private var query = ""
+    private var letters: [LetterDocument] {
+        model.library.filter { query.isEmpty || ($0.title + $0.recipient + $0.text).localizedCaseInsensitiveContains(query) }
+    }
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    SmallLabel(text: "Your correspondence").foregroundStyle(Palette.mist)
-                    Text("Words worth keeping.").font(.system(size: 32, design: .serif)).foregroundStyle(Palette.cream)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 10) {
+                    SmallLabel(text: "Letter Studio / The archive").foregroundStyle(Palette.brass)
+                    Text("Correspondence.").font(.custom("Baskerville", size: 46)).foregroundStyle(Palette.cream)
+                    Text("The people, the days, the things you wanted to say.")
+                        .font(.custom("Baskerville-Italic", size: 18)).foregroundStyle(Palette.mist)
                 }
                 Spacer()
-                Button("Back to your letter", systemImage: "xmark") { model.showLibrary = false }.buttonStyle(StudioButton())
-            }
-            TextField("Find a letter or a person…", text: $query).textFieldStyle(.roundedBorder).frame(maxWidth: 350)
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 290))], spacing: 32) {
-                    Button { Task { await model.newLetter() } } label: {
-                        VStack(spacing: 15) {
-                            Image(systemName: "plus").font(.system(size: 28, weight: .ultraLight))
-                            Text("A new beginning").font(.system(size: 19, design: .serif))
-                        }.foregroundStyle(Palette.cream).frame(height: 330).frame(maxWidth: .infinity)
-                            .overlay(Rectangle().stroke(Palette.mist.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [3, 5])))
-                    }.buttonStyle(.plain)
-                    ForEach(model.library.filter { query.isEmpty || ($0.title + $0.recipient + $0.text).localizedCaseInsensitiveContains(query) }) { letter in
-                        Button { Task { await model.select(letter) } } label: {
-                            VStack(alignment: .leading, spacing: 15) {
-                                PaperView(layout: LetterLayout(document: letter), width: 210, decoration: false)
-                                    .frame(height: 265, alignment: .top).clipped()
-                                Text(letter.title).font(.system(size: 18, design: .serif)).foregroundStyle(Palette.cream).lineLimit(1)
-                                Text(letter.recipient.isEmpty ? "An unwritten letter" : "To \(letter.recipient)").font(.system(size: 11)).foregroundStyle(Palette.mist).lineLimit(1)
-                            }.frame(height: 330)
-                        }.buttonStyle(.plain)
+                Button("Back", systemImage: "arrow.left") { model.showLibrary = false }.buttonStyle(StudioButton())
+                Button("New letter", systemImage: "plus") { Task { await model.newLetter() } }.buttonStyle(StudioButton(filled: true))
+            }.padding(.bottom, 34)
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundStyle(Palette.mist)
+                ZStack(alignment: .leading) {
+                    if query.isEmpty {
+                        Text("Find a letter or a person").foregroundStyle(Palette.mist).allowsHitTesting(false).accessibilityHidden(true)
                     }
-                }.padding(.vertical, 12)
-            }
-        }.padding(40).background(Palette.desk)
+                    TextField("", text: $query).textFieldStyle(.plain).foregroundStyle(Palette.cream)
+                        .accessibilityLabel("Search letters")
+                }.font(.custom("AvenirNext-Regular", size: 13))
+                Spacer()
+                SmallLabel(text: "\(letters.count) \(letters.count == 1 ? "letter" : "letters")").foregroundStyle(Palette.mist)
+            }.padding(.vertical, 18)
+            Rectangle().fill(Palette.brass.opacity(0.3)).frame(height: 0.5)
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if letters.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("No letters found.").font(.custom("Baskerville", size: 30))
+                            Text("Try another name or a few words from the letter.").font(.system(size: 13))
+                            Button("Clear search") { query = "" }.buttonStyle(StudioButton())
+                        }.foregroundStyle(Palette.cream).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 50)
+                    }
+                    ForEach(Array(letters.enumerated()), id: \.element.id) { index, letter in
+                        ArchiveRow(letter: letter, index: index) { Task { await model.select(letter) } }
+                    }
+                }
+            }.scrollIndicators(.visible)
+        }.padding(40).background { DeskBackground() }
+    }
+}
+
+private struct ArchiveRow: View {
+    let letter: LetterDocument
+    let index: Int
+    let action: () -> Void
+    @State private var hovered = false
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 24) {
+                Text(String(format: "%02d", index + 1)).font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.brass)
+                PaperView(layout: LetterLayout(document: letter), width: 85, decoration: false)
+                    .shadow(color: .black.opacity(0.2), radius: 6, y: 4)
+                    .padding(.vertical, 4)
+                VStack(alignment: .leading, spacing: 9) {
+                    Text(letter.title).font(.custom("Baskerville", size: 27)).foregroundStyle(Palette.cream).lineLimit(1)
+                    Text(letter.recipient.isEmpty ? "No recipient yet" : "To \(letter.recipient)")
+                        .font(.custom("AvenirNext-Regular", size: 12)).foregroundStyle(Palette.mist).lineLimit(1)
+                    Text(String(letter.text.replacingOccurrences(of: "\n", with: " ").prefix(120)))
+                        .font(.custom("Baskerville-Italic", size: 14)).foregroundStyle(Palette.mist).lineLimit(2)
+                        .frame(maxWidth: 480, alignment: .leading)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 14) {
+                    Text(letter.updatedAt, format: .dateTime.month(.abbreviated).day())
+                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(Palette.mist)
+                    Image(systemName: "arrow.up.right").font(.system(size: 18, weight: .light)).foregroundStyle(Palette.brass)
+                }
+            }.padding(.vertical, 22).padding(.horizontal, 12)
+                .contentShape(Rectangle())
+                .background(Color.white.opacity(hovered ? 0.04 : 0))
+                .overlay(alignment: .bottom) { Rectangle().fill(Palette.brass.opacity(0.2)).frame(height: 0.5) }
+        }.buttonStyle(.plain).onHover { hovered = $0 }.accessibilityLabel("Open \(letter.title)")
     }
 }
 
@@ -212,7 +261,7 @@ struct PrintPreview: View {
             }.frame(width: 390).background(Color(hex: 0xD6DCD4))
             VStack(alignment: .leading, spacing: 24) {
                 SmallLabel(text: "From screen to paper").foregroundStyle(Palette.muted)
-                Text("Something\nto hold.").font(.system(size: 36, design: .serif)).foregroundStyle(Palette.text)
+                Text("From you,\nwith love.").font(.custom("Baskerville", size: 42)).foregroundStyle(Palette.text)
                 Text("\(model.layout.pages.count) \(model.layout.pages.count == 1 ? "page" : "pages") · \(model.document.paper.name) · Actual size")
                     .font(.system(size: 12)).foregroundStyle(Palette.muted)
                 Toggle("Include paper color", isOn: $model.includePaperColor).font(.system(size: 12)).tint(Palette.text)
@@ -220,9 +269,9 @@ struct PrintPreview: View {
                     .font(.system(size: 12)).lineSpacing(5).foregroundStyle(Palette.muted)
                 Spacer()
                 Button { model.printLetter() } label: {
-                    Label("Choose printer…", systemImage: "printer").frame(maxWidth: .infinity).padding(13)
-                }.buttonStyle(.plain).background(Palette.text).foregroundStyle(Palette.cream).clipShape(RoundedRectangle(cornerRadius: 4))
-                Button("Save PDF…") { model.exportPDF() }.buttonStyle(.bordered).controlSize(.large)
+                    Label("Choose printer…", systemImage: "printer").frame(maxWidth: .infinity)
+                }.buttonStyle(FolioButton(primary: true))
+                Button { model.exportPDF() } label: { Label("Save PDF…", systemImage: "arrow.down.document").frame(maxWidth: .infinity) }.buttonStyle(FolioButton())
                 Button("Back to writing") { model.showPrint = false }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(Palette.muted)
             }.padding(.vertical, 30).frame(width: 245)
         }.padding(24).background(Palette.cream).frame(width: 760, height: 650)

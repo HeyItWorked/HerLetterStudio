@@ -1,0 +1,74 @@
+import AppKit
+import LetterCore
+
+/// Fixed-size visual smoke test using events in our own isolated window.
+/// Coordinates correspond to the reviewed 1380×930 workspace / 820×650 sheet.
+/// This is interaction evidence, not a VoiceOver or full keyboard-accessibility audit.
+@MainActor enum InterfaceQA {
+    static func click(_ x: CGFloat, _ yFromTop: CGFloat, window: NSWindow) async throws {
+        let target = window.attachedSheet ?? window
+        guard let content = target.contentView else { throw VerificationFailure.failed("Missing content view") }
+        target.makeKeyAndOrderFront(nil)
+        let point = content.convert(NSPoint(x: x, y: content.isFlipped ? yFromTop : content.bounds.height - yFromTop), to: nil)
+        for kind in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            guard let event = NSEvent.mouseEvent(with: kind, location: point, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: target.windowNumber,
+                context: nil, eventNumber: 0, clickCount: 1, pressure: kind == .leftMouseDown ? 1 : 0) else {
+                throw VerificationFailure.failed("Couldn't create window input")
+            }
+            NSApp.postEvent(event, atStart: false)
+        }
+        try await Task.sleep(for: .milliseconds(350))
+    }
+
+    static func enter(_ text: String, window: NSWindow) throws {
+        let target = window.attachedSheet ?? window
+        guard let editor = target.firstResponder as? NSTextView else {
+            throw VerificationFailure.failed("Text control didn't accept focus: \(String(describing: target.firstResponder))")
+        }
+        editor.selectAll(nil)
+        editor.insertText(text, replacementRange: editor.selectedRange())
+    }
+
+    static func capture(_ name: String, window: NSWindow) throws {
+        guard let content = (window.attachedSheet ?? window).contentView,
+              let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { return }
+        content.cacheDisplay(in: content.bounds, to: bitmap)
+        let url = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("build/" + name + ".png")
+        try bitmap.representation(using: .png, properties: [:])?.write(to: url)
+    }
+
+    static func run(model: StudioModel, window: NSWindow) async throws {
+        try await Task.sleep(for: .milliseconds(500))
+        print("Interaction window: \(window.contentView?.bounds ?? .zero)")
+        try await click(1115, 104, window: window)
+        try AppVerification.check(model.showFonts, "Mouse click didn't open Fonts")
+        try await Task.sleep(for: .milliseconds(500))
+        print("Sheet bounds: \(window.attachedSheet?.contentView?.bounds ?? .zero), flipped: \(window.attachedSheet?.contentView?.isFlipped ?? false)")
+        try await click(130, 383, window: window)
+        try capture("interaction-font-click", window: window)
+        try AppVerification.check(model.document.handwriting == .georgia, "Font row selected \(model.document.handwriting.name), expected Georgia")
+        try await click(362, 613, window: window)
+        try await click(470, 280, window: window)
+        try capture("interaction-before-type", window: window)
+        try enter("Dear friend, a sample written through the actual editor.", window: window)
+        try await click(378, 613, window: window)
+        try capture("interaction-fonts", window: window)
+        try await click(755, 48, window: window)
+        try AppVerification.check(!model.showFonts, "Done didn't close specimen")
+        // Open the archive with the real rail control, then reopen its first row.
+        try await click(37, 270, window: window)
+        try AppVerification.check(model.showLibrary, "Archive rail didn't open")
+        try await click(400, 260, window: window)
+        try capture("interaction-before-search", window: window)
+        try enter("no-correspondence-matches-this", window: window)
+        try await Task.sleep(for: .milliseconds(250))
+        try capture("interaction-search", window: window)
+        // Escape the query through the focused search field and reopen the row.
+        try enter("", window: window)
+        try await Task.sleep(for: .milliseconds(250))
+        try await click(470, 370, window: window)
+        try AppVerification.check(!model.showLibrary, "Archive row didn't reopen letter")
+        print("PASS: native mouse/text interaction — font selection, specimen editing, archive search and reopen")
+    }
+}
