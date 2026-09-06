@@ -30,6 +30,7 @@ struct WorkspaceView: View {
         .preferredColorScheme(.light)
         .frame(minWidth: 1020, minHeight: 720)
         .sheet(isPresented: $model.showPrint) { PrintPreview(model: model) }
+        .sheet(isPresented: $model.showWalkthrough) { WalkthroughView(model: model) }
         .sheet(isPresented: $model.showGuide) { GuideView(model: model) }
         .sheet(isPresented: $model.showFonts) { FontGallery(model: model) }
         .alert("A little attention needed", isPresented: Binding(get: { model.error != nil || model.speech.error != nil }, set: { if !$0 { model.error = nil; model.speech.error = nil } })) {
@@ -46,6 +47,7 @@ struct WorkspaceView: View {
             RailButton(symbol: "square.and.pencil", title: "Write", selected: !model.showLibrary) { model.showLibrary = false }
             RailButton(symbol: "tray.full", title: "Letters", selected: model.showLibrary) { model.showLibrary.toggle() }
             RailButton(symbol: "plus", title: "New") { Task { await model.newLetter() } }
+            RailButton(symbol: "play.rectangle", title: "Demo") { model.showWalkthrough = true }
             Spacer()
             RailButton(symbol: model.focusMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right", title: "Focus", selected: model.focusMode) { model.focusMode.toggle() }
             RailButton(symbol: "questionmark.circle", title: "Guide") {

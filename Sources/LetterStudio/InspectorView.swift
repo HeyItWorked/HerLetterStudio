@@ -22,7 +22,9 @@ struct InspectorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     switch model.panel {
-                    case .context: contextPanel
+                    case .context:
+                        if model.walkthroughID == model.document.id { WalkthroughContext(model: model) }
+                        else { contextPanel }
                     case .writing: writingPanel
                     case .materials: materialsPanel
                     case .voice: VoiceEditPanel(model: model)

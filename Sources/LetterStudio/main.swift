@@ -75,7 +75,10 @@ import LetterCore
                 } catch { print("FAIL: \(error)"); exit(1) }
             }
         }
+        if arguments.contains("--demo"), snapshotIndex == nil { Task { await model.openWalkthrough() } }
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
+            if arguments.contains("--demo"), let sample = try? Walkthrough.letter() { model.document = sample; model.walkthroughID = sample.id }
+            if arguments.contains("--walkthrough") { model.showWalkthrough = true }
             if arguments.contains("--focus") { model.focusMode = true }
             if arguments.contains("--preparing") { model.speech.state = .preparing; model.speech.status = "Preparing on-device dictation…" }
             if let index = arguments.firstIndex(of: "--font"), arguments.count > index + 1,

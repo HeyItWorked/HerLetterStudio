@@ -13,6 +13,8 @@ elif [[ "${1:-ui}" == voice-edit ]]; then
   say -v Samantha -o build/voice-edits/tender.aiff 'A little more tender.'
   say -v Samantha -o build/voice-edits/ink.aiff 'Change ink to oxblood sincerity.'
   "$app_binary" --verify-voice-edit "$PWD/build/voice-edits"
+elif [[ "${1:-ui}" == model ]]; then
+  "$app_binary" --verify
 elif [[ "${1:-ui}" == snapshot ]]; then
   "$app_binary" --snapshot "$PWD/build/${2:-workspace}.png" "${@:3}"
 elif [[ "${1:-ui}" == transition ]]; then

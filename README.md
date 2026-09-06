@@ -72,3 +72,11 @@ Open **Expression**, choose a hand, adjust **Resonance**, and click **Watch the 
 Expression settings are saved with each letter and support undo/redo. Reset removes expression spacing/pacing while keeping your font and ink. This remains font-based rendering: it does not synthesize real pen strokes, infer emotion, or control a calligraphy robot. See [the feasibility map](LONGHAND.md) for the narrative's software, research, and hardware boundaries.
 
 The four new internet-sourced hands appear first in Fonts. Try Bad Script for a personal letter, Reenie Beanie for a spontaneous note, Sacramento for fine cursive, or Parisienne for a romantic flourish. Scroll the collection for the original styles. Font provenance and checksums are in `Sources/LetterCore/Resources/Fonts/SOURCES.md`.
+
+## Try the complete photographic walkthrough
+
+Click **Demo** in the left rail, then **Open the sample letter**. This creates “Twenty-eight ordinary years”: an original fictional anniversary letter with a client brief, two credited Unsplash reference photographs, Parisienne lettering, sepia ink and a one-page print layout. Your current letter is saved first.
+
+In the sample Context folio, click **Watch** to replay the writing without a microphone; **Try an edit** opens a prepared instruction (click Apply instruction); **Print** opens the actual output preview. Photographs inform the writing and are not printed. The editable sample is saved in Letters. Reopening it later retains the letter and photos; Demo opens another fresh copy with the walkthrough controls.
+
+See [PRINTER.md](PRINTER.md) for the Amazon printer shortlist, paper limits and Amazon integration findings.

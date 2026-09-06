@@ -21,6 +21,11 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) throws {
         try commandsRequireExplicitUnambiguousInput()
         try expandedVoiceEditing()
         try expressionPreservesDocumentsAndPrint()
+        let walkthrough = try Walkthrough.letter()
+        try expect(walkthrough.photos.count == 2 && walkthrough.photos.allSatisfy { !$0.data.isEmpty }, "walkthrough photographs missing")
+        let samplePDF = PDFDocument(data: LetterLayout(document: walkthrough).pdfData())
+        try expect(samplePDF?.string?.filter { !$0.isWhitespace } == walkthrough.text.filter { !$0.isWhitespace }, "walkthrough output lost text")
+        try expect(samplePDF?.pageCount == 1, "walkthrough should fit on one page")
         try bundledFontsResolve()
         print("PASS: 10 core checks (dictation, Unicode/photos, pagination/PDF, empty page, atomic storage, schema, commands, expanded edits, fonts, expression/PDF compatibility)")
     }

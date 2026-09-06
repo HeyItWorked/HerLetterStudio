@@ -22,6 +22,8 @@ import LetterCore
     var showLibrary = false
     var showPrint = false
     var showGuide = false
+    var showWalkthrough = false
+    var walkthroughID: UUID?
     var showFonts = false
     var commandInput = ""
     var commandFeedback = "Say what you want to change."
@@ -110,6 +112,21 @@ import LetterCore
             self.error = "Couldn't save this letter: \(error.localizedDescription). Use File → Export Letter to keep a copy."
             return false
         }
+    }
+
+    func openWalkthrough() async {
+        await stopInput()
+        guard saveNow() else { return }
+        do {
+            let sample = try Walkthrough.letter()
+            document = sample
+            clearHistory()
+            walkthroughID = sample.id
+            panel = .context
+            showLibrary = false
+            showWalkthrough = false
+            saveNow()
+        } catch { self.error = "The sample photographs could not be loaded." }
     }
 
     func newLetter() async {

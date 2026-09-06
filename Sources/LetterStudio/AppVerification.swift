@@ -122,6 +122,14 @@ enum VerificationFailure: Error { case failed(String) }
         try check(model.document.text == "The latest words must survive.", "selecting active letter lost pending edits")
         let reopened = StudioModel(storageURL: directory)
         try check(reopened.document.text == model.document.text, "reopened library differs")
+        let previousID = model.document.id
+        await model.openWalkthrough()
+        try check(model.document.id != previousID && model.document.photos.count == 2, "walkthrough did not create a complete new letter")
+        try check(model.library.contains { $0.id == previousID }, "walkthrough replaced the previous letter")
+        try check(model.walkthroughID == model.document.id && model.panel == .context, "walkthrough context not active")
+        await model.applyVoiceEdit("Replace ordinary with beautiful")
+        try check(model.document.text.contains("beautiful things"), "walkthrough edit example failed")
+        print("PASS: walkthrough creates a saved photo letter, preserves prior work, and accepts its example edit")
         let savedID = model.document.id
         let backup = root.appendingPathComponent("disconnected-library")
         try FileManager.default.moveItem(at: directory, to: backup)

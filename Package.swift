@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v26)],
     products: [.executable(name: "LetterStudio", targets: ["LetterStudio"])],
     targets: [
-        .target(name: "LetterCore", resources: [.copy("Resources/Fonts")]),
+        .target(name: "LetterCore", resources: [.copy("Resources/Fonts"), .copy("Resources/Walkthrough")]),
         .executableTarget(name: "LetterStudio", dependencies: ["LetterCore"]),
         .executableTarget(name: "LetterCoreChecks", dependencies: ["LetterCore"], path: "Tests/LetterCoreTests")
     ]
