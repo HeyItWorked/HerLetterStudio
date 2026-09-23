@@ -1,100 +1,94 @@
 # HerLetterStudio
 
-A native Mac letter-writing workspace inspired by the office scenes in *Her*. Speak or type your own words, watch them appear in handwriting, and export or print the finished page.
+A native Mac app for writing letters the way *Her* imagines it: speak or type your own words, watch them appear in handwriting on real-looking paper, then export or print the finished page. Dictation runs on-device. No account, no cloud, no paid API.
 
-Requires macOS 26. The built app is at `build/HerLetterStudio.app`.
+Requires macOS 26.
 
-## Use
+## Try it in 5 minutes
 
-1. Open the app and choose New. Add a recipient, occasion, notes, or reference photos in Context.
-2. Press the microphone button and allow microphone access. English speech recognition runs on device; Apple may download speech assets on first use. Press again to finish the last words.
-3. Use Writing/Edit to correct text. Fonts opens a specimen book: choose a style from the index, then click Edit sample text to try your own words. Expression offers Tender, Familiar, and Reflective hands, a resonance control, five inks, and stationery. Expand Lettering & size for font size; choose Letter/A4 below.
-4. Open Voice Edit and press Speak an edit, speak, then Apply edit. Or type the same instruction and click Apply instruction. Recognized instructions and edit feedback remain visible. Ordinary dictation is treated as letter text.
-5. Open Print to review every page, save a PDF, or choose a printer in the native Mac panel. Enable paper color to print the stationery tint; leave it off when using colored paper.
+No microphone needed — start with the guided sample:
 
-To try the writing animation without speaking, open any populated letter and click the small play triangle beside Voice edit. This replays the ink reveal without changing your words.
+1. Build and open the app (see [Build](#build)), then click **Demo** in the left rail.
+2. Click **Open the sample letter**. This creates "Twenty-eight ordinary years": a fictional anniversary letter with a client brief, two credited reference photos, Parisienne lettering, sepia ink, and a one-page print layout. Your current letter is saved first.
+3. In the sample Context folio, click **Watch** to replay the ink reveal without a microphone, **Try an edit** for a prepared voice-edit instruction (then Apply instruction), or **Print** for the real output preview.
 
-Drafts autosave locally under `~/Library/Application Support/HerLetterStudio`. The Letters view reopens drafts; the File menu imports/exports portable `.letter` files including references. Failed saves keep the current document open for recovery.
+You now have a saved sample in Letters. Reopening it later keeps the letter and photos; Demo always opens a fresh copy. Next step: write your own below.
 
-The eleven lettering styles include seven bundled, licensed handwriting fonts (La Belle Aurore, Caveat, Nothing You Could Do, Bad Script, Reenie Beanie, Sacramento, Parisienne), plus the Mac’s Baskerville, Georgia, Palatino, and American Typewriter. It is not a learned copy of your handwriting. Screen and PDF share the same Core Text page layout; exported text stays selectable. References and UI decorations are not printed.
+## Write your own letter
 
-## Build and verify
+1. Open the app and choose **New**. In **Context**, add a recipient, occasion, notes, or reference photos.
+2. Press the microphone button and allow microphone access when asked. English recognition runs on-device; Apple may download speech assets on first use. Press again to finish.
+3. Fix wording in **Writing/Edit**. **Fonts** opens a specimen book: pick a style from the index, then Edit sample text to try your own words. **Expression** offers Tender, Familiar, and Reflective hands, a resonance control, five inks, and stationery; expand Lettering & size for font size and pick Letter/A4 below.
+4. Correct hands-free in **Voice Edit**: press Speak an edit, say the instruction, then Apply edit — or type it and Apply instruction. Recognized instructions and feedback stay visible. Plain speech here is treated as letter text, not a command.
+5. Open **Print** to review every page, save a PDF, or print through the native Mac panel. Enable paper color to print the stationery tint; leave it off when using colored paper.
+
+Tip: the small play triangle beside Voice edit replays the ink reveal on any populated letter without changing your words.
+
+## Voice edits
+
+Say or type these in Voice Edit. Phrase edits need exactly one match — ambiguous edits leave the text unchanged and explain why.
+
+| Instruction | Effect |
+|---|---|
+| “Replace afternoon with evening” / “Change afternoon to evening” | Replace a phrase |
+| “Delete by the water” | Delete a phrase |
+| “Insert beautiful before afternoon” / “Insert forever after love” | Insert a word |
+| “Delete the last sentence” / “Delete the last paragraph” | Delete a block |
+| “New paragraph” | Break the paragraph |
+| “Use Baskerville” / “Change font to Daydream” | Change hand |
+| “Set font size to 22” / “Make it bigger” / “Make it smaller” | Change size |
+| “Undo the last change” / “Redo” | Step through history |
+| “Read it back” / “Print preview” | Read aloud / open review |
+
+Expression-only phrases (“a little more tender”, “less formal”, “more reflective”, “more restrained”, “more expressive”, “change ink to oxblood sincerity”) change presentation, never wording. “Send to the writing desk” opens print review. The panel shows each change with undo/redo — up to 50 revisions per letter, including font, size, ink, and expression. Undo history is session-local and clears when you switch letters.
+
+## Letters, drafts, and files
+
+- Drafts autosave locally under `~/Library/Application Support/HerLetterStudio`.
+- **Letters** reopens drafts: sort by title or recent edit, right-click to duplicate or move to **Recently Removed**, recover from that collection, and rename by editing the title above the paper.
+- **Drafts** in the bottom bar keeps named versions across launches; restoring keeps a safety copy of your current letter first. Versions stay on this Mac — export a `.letter` file (File menu, references included) for an independent backup.
+- Failed saves keep the current document open for recovery.
+
+## Paper, hands, and quiet
+
+- **Paper** opens a stationery drawer (Cotton Rag, Laid, Vellum, Onion Skin, Cream Bond). The material saves with the letter, supports undo, and printing defaults to ink only — tick **Include paper color & texture** to print the same procedural surface you see on screen. Material names describe visual textures, not certified paper stock.
+- **Fonts** holds eleven styles: seven bundled licensed handwriting fonts (La Belle Aurore, Caveat, Nothing You Could Do, Bad Script, Reenie Beanie, Sacramento, Parisienne) plus Baskerville, Georgia, Palatino, and American Typewriter. Search names and descriptive words (try “romantic” or “slanted”); star hands and enable **Favorites only** to narrow the collection. Search is a text filter, not emotion analysis. Provenance and checksums: `Sources/LetterCore/Resources/Fonts/SOURCES.md`.
+- **Quiet** in the rail finishes visible ink animation at once, stops readback, and suppresses further reveal motion. Dictation still updates the page immediately. The preference persists and complements macOS Reduce Motion. No sound effects.
+- Zoom (Fit, Fit Width, percentages, page menu, pinch, ⌘−/⌘=/⌘0) never changes print size. Follow dictation is off by default. Each page's **Edit text** opens a larger editor at that passage.
+
+## How it works
+
+Screen and PDF share one Core Text page layout, so what you see is what prints — exported text stays selectable. Reference photos inform the writing and are never printed, nor are UI decorations. Expression (hands, resonance, ink) adjusts spacing, pacing, and color of font-based rendering; it does not synthesize pen strokes, infer emotion, or drive hardware. It is not a learned copy of your handwriting either.
+
+## Build
 
 ```sh
-bash scripts/test.sh
-bash scripts/build-app.sh
-bash scripts/verify-app.sh
-bash scripts/verify-app.sh voice
-bash scripts/verify-app.sh voice-edit
-bash scripts/verify-app.sh interaction
-bash scripts/verify-app.sh microphone
+bash scripts/test.sh        # core checks: dictation, pagination/PDF, storage, commands
+bash scripts/build-app.sh   # ad-hoc signed local app (not notarized)
 open 'build/HerLetterStudio.app'
 ```
 
-The build script creates an ad-hoc signed local app. This is not a notarized public distribution.
+Deeper verification (screenshots land under `build/`):
 
-Checks cover pagination and exact PDF text across all styles/paper sizes, document round trips and schema rejection, command parsing, transcript reconciliation, save-failure recovery, speech startup cancellation, recorded speech recognition, concurrent stopping, and real microphone capture. UI snapshots are written under `build/`.
+```sh
+bash scripts/verify-app.sh              # app checks + window snapshots
+bash scripts/verify-app.sh voice        # recorded-speech recognition
+bash scripts/verify-app.sh voice-edit   # spoken edit instructions
+bash scripts/verify-app.sh interaction  # fixed-window click/type smoke test (isolated window; never touches your drafts or microphone)
+bash scripts/verify-app.sh microphone   # real microphone capture
+bash scripts/verify-app.sh transition transition-scripted  # repeatable workspace drive; append an audio path to use recorded speech
+```
 
-A physical printer was not configured during development. PDF dimensions and the native print-preview path were checked; paper output and your own spoken dictation accuracy still need a hands-on trial. No cloud account or paid API is required.
+Honest limits: the build is ad-hoc signed, not a notarized public distribution. A physical printer was never configured during development — PDF dimensions and the print-preview path were checked, but paper output and your own dictation accuracy still need a hands-on trial.
 
-See `research/FINDINGS.md` for film references and sources. Font licenses ship beside the bundled fonts in `Sources/LetterCore/Resources/Fonts`.
+## Docs map
 
-## Transition QA
-
-`bash scripts/verify-app.sh transition transition-scripted` drives the visible workspace with repeatable partial transcripts, including a capitalization correction and line wrapping. To use recorded speech instead, append an absolute audio-file path. These runs use an in-memory draft and never request microphone access. Frames, cursor samples, and the final transcript are saved under `build/`. Screen capture affects timing, so the CSV is a continuity diagnostic, not a frame-rate benchmark.
-
-## Voice editing
-
-Speak or type these instructions in Voice Edit:
-
-- “Replace afternoon with evening” or “Change afternoon to evening”
-- “Delete by the water”
-- “Insert beautiful before afternoon” or “Insert forever after love”
-- “Delete the last sentence” / “Delete the last paragraph”
-- “New paragraph”
-- “Use Baskerville” / “Change font to Daydream”
-- “Set font size to 22” / “Make it bigger” / “Make it smaller”
-- “Undo the last change” / “Redo”
-- “Read it back” / “Print preview”
-
-Phrase edits require exactly one matching phrase; ambiguous edits leave the text unchanged and explain why. The panel shows the changed text and offers undo/redo, with up to 50 revisions for the current letter. Font changes and size changes participate in the same history. Undo history is session-local; it is cleared when switching letters. These are supported editing instructions, not open-ended generative rewriting.
-
-## Design and interaction checks
-
-The correspondence desk uses a fixed dictation bar, an ivory reference folio, an eleven-style specimen book, and a row-based archive. Focus hides the folio. Hover/press feedback and spatial transitions respect Reduce Motion. See `DESIGN.md` for the visual thesis and review decisions.
-
-The optional `interaction` verifier clicks and types in an isolated native window. It checks font selection across a row, editing the specimen, opening/searching/reopening the archive, and saves screenshots of the typed specimen and empty search results. It is a fixed-window mouse/text smoke test, not a complete keyboard or VoiceOver audit. It does not open your saved drafts or request the microphone.
-
-## Longhand Console exploration
-
-Open **Expression**, choose a hand, adjust **Resonance**, and click **Watch the ink**. Scroll down for the five inks and paper. Voice Edit accepts “a little more tender”, “less formal”, “more reflective”, “more restrained”, “more expressive”, and “change ink to oxblood sincerity”. These change presentation, not wording. “Send to the writing desk” opens print review.
-
-Expression settings are saved with each letter and support undo/redo. Reset removes expression spacing/pacing while keeping your font and ink. This remains font-based rendering: it does not synthesize real pen strokes, infer emotion, or control a calligraphy robot. See [the feasibility map](LONGHAND.md) for the narrative's software, research, and hardware boundaries.
-
-The four new internet-sourced hands appear first in Fonts. Try Bad Script for a personal letter, Reenie Beanie for a spontaneous note, Sacramento for fine cursive, or Parisienne for a romantic flourish. Scroll the collection for the original styles. Font provenance and checksums are in `Sources/LetterCore/Resources/Fonts/SOURCES.md`.
-
-## Try the complete photographic walkthrough
-
-Click **Demo** in the left rail, then **Open the sample letter**. This creates “Twenty-eight ordinary years”: an original fictional anniversary letter with a client brief, two credited Unsplash reference photographs, Parisienne lettering, sepia ink and a one-page print layout. Your current letter is saved first.
-
-In the sample Context folio, click **Watch** to replay the writing without a microphone; **Try an edit** opens a prepared instruction (click Apply instruction); **Print** opens the actual output preview. Photographs inform the writing and are not printed. The editable sample is saved in Letters. Reopening it later retains the letter and photos; Demo opens another fresh copy with the walkthrough controls.
-
-See [PRINTER.md](PRINTER.md) for the Amazon printer shortlist, paper limits and Amazon integration findings.
-
-## The Writing Room
-
-The desk now uses warm walnut, brass accents and an oxblood writing pad. **Paper** opens a stationery drawer with Cotton Rag, Laid, Vellum, Onion Skin and Cream Bond surface previews. The material is saved with the letter and supports undo. Printing defaults to ink only; **Include paper color & texture** includes the same procedural surface used on screen. The material names describe visual textures, not physical paper certification.
-
-**Fonts** now searches names and descriptive words (try “romantic”, “slanted” or “familiar”). Star a hand and enable **Favorites only** to narrow the collection. Favorites persist on this Mac. Search is a text filter, not semantic emotion analysis.
-
-**Quiet** in the rail immediately finishes visible ink animation, stops current readback, and suppresses subsequent reveal/transition motion. Dictation still updates the page immediately; explicit Read aloud remains available. This preference persists and complements macOS Reduce Motion. No decorative sound effects are added.
-
-### Navigation and revisions
-
-Use the control strip above the paper for Fit, Fit Width, percentages, or the page menu. Pinch to zoom; ⌘− / ⌘= zoom and ⌘0 fits the page. Zoom does not change printing size. Follow dictation is off by default; enable the trailing follow control to move to newly created pages.
-
-Each page's **Edit text** opens a larger editor at that passage. **Drafts** in the bottom bar keeps named versions across launches; restoring keeps a safety copy of the current letter first. These versions stay on this Mac. Export a `.letter` file for an independent backup.
-
-In **Letters**, sort by title or recent edit, and right-click to duplicate or move a letter to **Recently Removed**. Select that collection in the archive menu and click a letter to recover it. To rename a letter, open it and edit the title above the paper.
-
-The print preview now shows the generated PDF, including the paper color/texture option. Load the matching paper size and use 100% scale in the Mac print panel. See [the workflow audit](WORKFLOW-AUDIT.md) for remaining limitations and verification coverage.
+| Doc | What it answers |
+|---|---|
+| `SPEC.md` | What was built, and the exact build/verify commands |
+| `DESIGN.md` | The visual thesis and review decisions |
+| `research/FINDINGS.md` | Film references and sources |
+| `LONGHAND.md` | Feasibility map: software, research, and hardware boundaries |
+| `PRINTER.md` | Printer shortlist, paper limits, store-integration findings |
+| `WORKFLOW-AUDIT.md` | Remaining limitations and verification coverage |
+| `PROGRESS.md` | Build history and what's next |
