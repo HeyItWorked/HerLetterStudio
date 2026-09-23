@@ -135,7 +135,7 @@ import LetterCore
         quietMode = preferences?.bool(forKey: "quietMode") ?? false
         FontLibrary.register()
         storage = inMemory ? nil : storageURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("Letter Studio", isDirectory: true)
+            .appendingPathComponent("HerLetterStudio", isDirectory: true)
         var loaded: [LetterDocument] = []
         var discarded: [LetterDocument] = []
         var loadError: String?
@@ -609,7 +609,7 @@ import LetterCore
             document = imported
             clearHistory()
             saveNow()
-        } catch { self.error = "This file isn't a supported Letter Studio document." }
+        } catch { self.error = "This file isn't a supported HerLetterStudio document." }
     }
 
     private var safeFilename: String {

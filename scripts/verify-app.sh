@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-app_binary="$PWD/build/Letter Studio.app/Contents/MacOS/LetterStudio"
+app_binary="$PWD/build/HerLetterStudio.app/Contents/MacOS/HerLetterStudio"
 if [[ "${1:-ui}" == interaction ]]; then
   "$app_binary" --verify-ui
 elif [[ "${1:-ui}" == voice-edit ]]; then

@@ -44,7 +44,7 @@ import LetterCore
         let compact = arguments.contains("--compact")
         let size = NSSize(width: compact ? 1060 : 1380, height: compact ? 760 : 930)
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.title = "Letter Studio"
+        window.title = "HerLetterStudio"
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
@@ -52,13 +52,13 @@ import LetterCore
         window.minSize = NSSize(width: 1020, height: 760)
         window.contentView = NSHostingView(rootView: WorkspaceView(model: model).padding(.top, 25).background(Palette.deep))
         window.center()
-        if snapshotIndex == nil && transitionIndex == nil && !arguments.contains("--verify-ui") { window.setFrameAutosaveName("LetterStudioMain") }
+        if snapshotIndex == nil && transitionIndex == nil && !arguments.contains("--verify-ui") { window.setFrameAutosaveName("HerLetterStudioMain") }
         makeMenu()
         NSApp.applicationIconImage = appIcon()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         Task { try? await Task.sleep(for: .milliseconds(150)); window.makeFirstResponder(nil) }
-        print("Letter Studio window: \(window.windowNumber)")
+        print("HerLetterStudio window: \(window.windowNumber)")
         if arguments.contains("--verify-ui") {
             Task {
                 do { try await InterfaceQA.run(model: model, window: window); exit(0) }
@@ -127,10 +127,10 @@ import LetterCore
         let appItem = NSMenuItem()
         bar.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About Letter Studio", action: #selector(about), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About HerLetterStudio", action: #selector(about), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide Letter Studio", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quit Letter Studio", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Hide HerLetterStudio", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "Quit HerLetterStudio", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         let file = NSMenu(title: "File")
         file.addItem(withTitle: "New Letter", action: #selector(newLetter), keyEquivalent: "n")
@@ -178,7 +178,7 @@ import LetterCore
     @objc func dictate() { Task { await model.toggleDictation() } }
     @objc func about() {
         NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationName: "Letter Studio", .applicationVersion: "1.0",
+            .applicationName: "HerLetterStudio", .applicationVersion: "1.0",
             .credits: NSAttributedString(string: "Personal correspondence, thoughtfully made.\nInspired by the letter-writing workspace in Her.\n\nHandwriting: La Belle Aurore, Caveat, Nothing You Could Do.\nFont licenses are bundled with the application.")
         ])
     }

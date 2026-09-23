@@ -1,8 +1,8 @@
-# Letter Studio
+# HerLetterStudio
 
 A native Mac letter-writing workspace inspired by the office scenes in *Her*. Speak or type your own words, watch them appear in handwriting, and export or print the finished page.
 
-Requires macOS 26. The built app is at `build/Letter Studio.app`.
+Requires macOS 26. The built app is at `build/HerLetterStudio.app`.
 
 ## Use
 
@@ -14,7 +14,7 @@ Requires macOS 26. The built app is at `build/Letter Studio.app`.
 
 To try the writing animation without speaking, open any populated letter and click the small play triangle beside Voice edit. This replays the ink reveal without changing your words.
 
-Drafts autosave locally under `~/Library/Application Support/Letter Studio`. The Letters view reopens drafts; the File menu imports/exports portable `.letter` files including references. Failed saves keep the current document open for recovery.
+Drafts autosave locally under `~/Library/Application Support/HerLetterStudio`. The Letters view reopens drafts; the File menu imports/exports portable `.letter` files including references. Failed saves keep the current document open for recovery.
 
 The eleven lettering styles include seven bundled, licensed handwriting fonts (La Belle Aurore, Caveat, Nothing You Could Do, Bad Script, Reenie Beanie, Sacramento, Parisienne), plus the Mac’s Baskerville, Georgia, Palatino, and American Typewriter. It is not a learned copy of your handwriting. Screen and PDF share the same Core Text page layout; exported text stays selectable. References and UI decorations are not printed.
 
@@ -28,7 +28,7 @@ bash scripts/verify-app.sh voice
 bash scripts/verify-app.sh voice-edit
 bash scripts/verify-app.sh interaction
 bash scripts/verify-app.sh microphone
-open 'build/Letter Studio.app'
+open 'build/HerLetterStudio.app'
 ```
 
 The build script creates an ad-hoc signed local app. This is not a notarized public distribution.

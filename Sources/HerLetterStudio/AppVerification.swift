@@ -139,7 +139,7 @@ enum VerificationFailure: Error { case failed(String) }
         await expressive.applyVoiceEdit("Send to the writing desk")
         try check(expressive.showPrint, "writing desk did not open review")
         print("PASS: expression and ink commands, grouped resonance undo, reset, renderer synchronization, print review")
-        let suiteName = "LetterStudio-QA-\(UUID())"
+        let suiteName = "HerLetterStudio-QA-\(UUID())"
         let suite = UserDefaults(suiteName: suiteName)!
         defer { suite.removePersistentDomain(forName: suiteName) }
         let settings = StudioModel(inMemory: true, preferencesStore: suite)
