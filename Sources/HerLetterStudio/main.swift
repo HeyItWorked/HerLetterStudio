@@ -8,20 +8,7 @@ import LetterCore
     private var terminationPending = false
     func applicationDidFinishLaunching(_ notification: Notification) {
         let arguments = ProcessInfo.processInfo.arguments
-        if let index = arguments.firstIndex(of: "--verify-voice-edit"), arguments.count > index + 1 {
-            Task {
-                do { try await AppVerification.voiceEditing(directory: URL(fileURLWithPath: arguments[index + 1])); exit(0) }
-                catch { print("FAIL: \(error)"); exit(1) }
-            }
-            return
-        }
-        if arguments.contains("--verify-microphone") {
-            Task {
-                do { try await AppVerification.microphone(); exit(0) }
-                catch { print("FAIL: \(error)"); exit(1) }
-            }
-            return
-        }
+        print("launching with args: \(arguments)")
         if arguments.contains("--verify") {
             Task {
                 do { try await AppVerification.run(); exit(0) }
@@ -29,18 +16,8 @@ import LetterCore
             }
             return
         }
-        if let index = arguments.firstIndex(of: "--verify-voice"), arguments.count > index + 2 {
-            Task {
-                do {
-                    try await AppVerification.voice(file: URL(fileURLWithPath: arguments[index + 1]), result: URL(fileURLWithPath: arguments[index + 2]))
-                    exit(0)
-                } catch { print("FAIL: \(error)"); exit(1) }
-            }
-            return
-        }
         let snapshotIndex = arguments.firstIndex(of: "--snapshot")
-        let transitionIndex = arguments.firstIndex(of: "--qa-transition")
-        model = StudioModel(inMemory: snapshotIndex != nil || transitionIndex != nil || arguments.contains("--verify-ui"))
+        model = StudioModel(inMemory: snapshotIndex != nil)
         let compact = arguments.contains("--compact")
         let size = NSSize(width: compact ? 1060 : 1380, height: compact ? 760 : 930)
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
@@ -52,43 +29,23 @@ import LetterCore
         window.minSize = NSSize(width: 1020, height: 760)
         window.contentView = NSHostingView(rootView: WorkspaceView(model: model).padding(.top, 25).background(Palette.deep))
         window.center()
-        if snapshotIndex == nil && transitionIndex == nil && !arguments.contains("--verify-ui") { window.setFrameAutosaveName("HerLetterStudioMain") }
+        if snapshotIndex == nil { window.setFrameAutosaveName("HerLetterStudioMain") }
         makeMenu()
         NSApp.applicationIconImage = appIcon()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        // HACK: without this the title field grabs focus on launch
         Task { try? await Task.sleep(for: .milliseconds(150)); window.makeFirstResponder(nil) }
         print("HerLetterStudio window: \(window.windowNumber)")
-        if arguments.contains("--verify-ui") {
-            Task {
-                do { try await InterfaceQA.run(model: model, window: window); exit(0) }
-                catch { print("FAIL: \(error)"); exit(1) }
-            }
-        }
-        if let transitionIndex, arguments.count > transitionIndex + 1 {
-            let directory = URL(fileURLWithPath: arguments[transitionIndex + 1])
-            Task {
-                do {
-                    try await TransitionQA.run(model: model, window: window, directory: directory,
-                        audio: arguments.count > transitionIndex + 2 ? URL(fileURLWithPath: arguments[transitionIndex + 2]) : nil)
-                    exit(0)
-                } catch { print("FAIL: \(error)"); exit(1) }
-            }
-        }
         if arguments.contains("--demo"), snapshotIndex == nil { Task { await model.openWalkthrough() } }
         if let snapshotIndex, arguments.indices.contains(snapshotIndex + 1) {
             if arguments.contains("--demo"), let sample = try? Walkthrough.letter() { model.document = sample; model.walkthroughID = sample.id }
-            if arguments.contains("--long-letter") { model.document.text = Array(repeating: "Dear friend, I remember the days by the water and the ordinary kindness you brought into our lives.\n\n", count: 35).joined() }
             if arguments.contains("--drafts") { model.keepDraft(name: "First thoughts"); model.showDrafts = true }
             if arguments.contains("--editor") { model.showEditor = true }
             if arguments.contains("--paper") { model.showPaper = true }
-            if arguments.contains("--laid") { model.chooseMaterial(.laid) }
-            if arguments.contains("--quiet") { model.quietMode = true }
             if arguments.contains("--walkthrough") { model.showWalkthrough = true }
             if arguments.contains("--focus") { model.focusMode = true }
             if arguments.contains("--preparing") { model.speech.state = .preparing; model.speech.status = "Preparing on-device dictation…" }
-            if let index = arguments.firstIndex(of: "--font"), arguments.count > index + 1,
-               let font = Handwriting(rawValue: arguments[index + 1]) { model.chooseFont(font) }
             if arguments.contains("--fonts") { model.showFonts = true }
             if arguments.contains("--voice-edit") { model.panel = .voice }
             if arguments.contains("--expression") { model.panel = .materials; model.chooseExpression(.tender); model.chooseInk(.oxblood) }
@@ -99,7 +56,7 @@ import LetterCore
             if arguments.contains("--print-preview") { model.showPrint = true }
             let destination = arguments[snapshotIndex + 1]
             Task {
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: .seconds(2)) // wait for swiftui to draw, 2s seems enough
                 capture(to: destination)
                 // Verification runs have no persistent document. A presented sheet
                 // otherwise defers normal application termination indefinitely.
@@ -121,7 +78,6 @@ import LetterCore
         return .terminateLater
     }
     func applicationWillTerminate(_ notification: Notification) { model?.saveNow() }
-
     private func makeMenu() {
         let bar = NSMenu()
         let appItem = NSMenuItem()

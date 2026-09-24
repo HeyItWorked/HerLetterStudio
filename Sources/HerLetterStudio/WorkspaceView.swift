@@ -43,7 +43,6 @@ struct WorkspaceView: View {
         .animation((reduceMotion || model.quietMode) ? nil : .easeInOut(duration: 0.35), value: model.focusMode)
         .animation((reduceMotion || model.quietMode) ? nil : .easeInOut(duration: 0.25), value: model.showLibrary)
     }
-
     private var rail: some View {
         VStack(spacing: 12) {
             Text("L.").font(.custom("Baskerville-Italic", size: 37)).foregroundStyle(Palette.brass)
@@ -62,7 +61,6 @@ struct WorkspaceView: View {
         }.frame(width: 76).background(Palette.deep)
             .overlay(alignment: .trailing) { Rectangle().fill(Palette.brass.opacity(0.13)).frame(width: 0.5) }
     }
-
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 10) {
@@ -84,9 +82,8 @@ struct WorkspaceView: View {
                 .buttonStyle(StudioButton(filled: true))
         }
     }
-
     private var writingDesk: some View { PaperDesk(model: model) }
-
+    // private var writingDesk2: some View { PaperView(layout: model.layout, width: 600) }
     private var footer: some View {
         HStack(spacing: 18) {
             Button { Task { await model.toggleDictation() } } label: {

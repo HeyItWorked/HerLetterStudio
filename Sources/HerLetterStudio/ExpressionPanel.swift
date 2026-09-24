@@ -3,7 +3,6 @@ import LetterCore
 
 struct ExpressionPanel: View {
     @Bindable var model: StudioModel
-
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 7) {

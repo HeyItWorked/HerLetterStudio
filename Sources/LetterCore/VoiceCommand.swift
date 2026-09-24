@@ -5,7 +5,7 @@ public enum VoiceCommand: Equatable, Sendable {
     case delete(String), insert(String, String, before: Bool), lastSentence, lastParagraph
     case expression(HandExpression), ink(Ink), resonance(Double)
     case font(Handwriting), size(Double), larger, smaller
-
+    // case cancel // TODO
     public static func parse(_ input: String) -> VoiceCommand? {
         let command = input.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: ".!?"))
@@ -57,11 +57,9 @@ public enum VoiceCommand: Equatable, Sendable {
         }
         return nil
     }
-
     private static func clean(_ text: String) -> String {
         text.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: "\"“”"))
     }
-
     private static func parts(_ input: String, prefix: String, separator: String) -> (String, String)? {
         guard input.lowercased().hasPrefix(prefix) else { return nil }
         let payload = String(input.dropFirst(prefix.count))
@@ -70,7 +68,6 @@ public enum VoiceCommand: Equatable, Sendable {
         let second = clean(String(payload[split.upperBound...]))
         return first.isEmpty || second.isEmpty ? nil : (first, second)
     }
-
     public func editing(_ text: String) -> String? {
         switch self {
         case let .replace(old, new): return Self.replacing(old, with: new, in: text)
@@ -106,7 +103,6 @@ public enum VoiceCommand: Equatable, Sendable {
         default: return nil
         }
     }
-
     /// A replacement must identify exactly one phrase; ambiguity leaves text untouched.
     public static func replacing(_ old: String, with new: String, in text: String) -> String? {
         guard let range = uniqueRange(old, in: text) else { return nil }
@@ -114,7 +110,6 @@ public enum VoiceCommand: Equatable, Sendable {
         result.replaceSubrange(range, with: new)
         return result
     }
-
     private static func uniqueRange(_ phrase: String, in text: String) -> Range<String.Index>? {
         guard !phrase.isEmpty,
               let expression = try? NSRegularExpression(pattern: "(?<![\\p{L}\\p{N}_])" + NSRegularExpression.escapedPattern(for: phrase) + "(?![\\p{L}\\p{N}_])", options: .caseInsensitive) else { return nil }

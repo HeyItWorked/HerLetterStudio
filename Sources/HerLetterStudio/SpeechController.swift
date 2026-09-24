@@ -16,16 +16,8 @@ import Observation
     private var output: ((String) -> Void)?
     private var stopTask: Task<Void, Never>?
     private var tapInstalled = false
-    private var fileTask: Task<Void, Never>?
     private var audioBridge: AudioBridge?
-    private(set) var capturedBuffers = 0
-    private let microphoneAccess: @MainActor () async -> Bool
-
-    init(microphoneAccess: @escaping @MainActor () async -> Bool = { await AVCaptureDevice.requestAccess(for: .audio) }) {
-        self.microphoneAccess = microphoneAccess
-    }
-
-    func start(audioFileURL: URL? = nil, output: @escaping (String) -> Void) async {
+    func start(output: @escaping (String) -> Void) async {
         guard state == .idle else { return }
         let id = UUID()
         startupID = id
@@ -34,9 +26,9 @@ import Observation
         error = nil
         self.output = output
         finalText = ""
-        capturedBuffers = 0
+        print("speech start")
         do {
-            let allowed = audioFileURL != nil ? true : await microphoneAccess()
+            let allowed = await AVCaptureDevice.requestAccess(for: .audio)
             guard id == startupID else { return }
             guard allowed else { throw VoiceError.message("Allow microphone access in System Settings → Privacy & Security → Microphone, then try again.") }
             guard SpeechTranscriber.isAvailable,
@@ -49,11 +41,8 @@ import Observation
                 try await installation.downloadAndInstall()
             }
             guard id == startupID else { return }
-            let audioFile = try audioFileURL.map { try AVAudioFile(forReading: $0) }
-            let engine = audioFile == nil ? AVAudioEngine() : nil
-            guard let sourceFormat = audioFile?.processingFormat ?? engine?.inputNode.outputFormat(forBus: 0) else {
-                throw VoiceError.message("No audio input is available.")
-            }
+            let engine = AVAudioEngine()
+            let sourceFormat = engine.inputNode.outputFormat(forBus: 0)
             guard sourceFormat.sampleRate > 0, sourceFormat.channelCount > 0,
                   let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber], considering: sourceFormat) else {
                 throw VoiceError.message("No usable microphone was found. Check your Mac's sound input settings.")
@@ -91,38 +80,18 @@ import Observation
                 await analyzer.cancelAndFinishNow()
                 return
             }
-            if let engine {
-                engine.inputNode.installTap(onBus: 0, bufferSize: 2048, format: sourceFormat, block: bridge.makeTap())
-                tapInstalled = true
-                engine.prepare()
-                try engine.start()
-            }
+            engine.inputNode.installTap(onBus: 0, bufferSize: 2048, format: sourceFormat, block: bridge.makeTap())
+            tapInstalled = true
+            engine.prepare()
+            try engine.start()
             state = .listening
             status = "Listening. Speak naturally."
-            if let audioFile {
-                fileTask = Task { [weak self] in
-                    do {
-                        while audioFile.framePosition < audioFile.length, !Task.isCancelled {
-                            guard let buffer = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: 4096) else { break }
-                            try audioFile.read(into: buffer)
-                            bridge.consume(buffer)
-                            // Yield so the same result consumer can process progressive hypotheses.
-                            try await Task.sleep(for: .milliseconds(10))
-                        }
-                        await self?.stop()
-                    } catch {
-                        self?.error = error.localizedDescription
-                        await self?.stop()
-                    }
-                }
-            }
         } catch {
             guard id == startupID else { return }
             self.error = error.localizedDescription
             await stop()
         }
     }
-
     func stop() async {
         if let stopTask { await stopTask.value; return }
         guard state != .idle else { return }
@@ -130,14 +99,11 @@ import Observation
         stopTask = task
         await task.value
     }
-
     private func finishSession() async {
         if state == .preparing {
             startupID = UUID()
         }
         state = .finishing
-        fileTask?.cancel()
-        fileTask = nil
         status = "Finishing your last words…"
         if let engine {
             engine.stop()
@@ -145,7 +111,6 @@ import Observation
         }
         tapInstalled = false
         engine = nil
-        capturedBuffers = audioBridge?.bufferCount ?? 0
         audioBridge = nil
         continuation?.finish()
         continuation = nil
@@ -174,9 +139,6 @@ private final class AudioBridge: @unchecked Sendable {
     let converter: AVAudioConverter
     let target: AVAudioFormat
     let continuation: AsyncStream<AnalyzerInput>.Continuation
-    private let countLock = NSLock()
-    private var count = 0
-    var bufferCount: Int { countLock.withLock { count } }
     init(source: AVAudioFormat, target: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation) throws {
         guard let converter = AVAudioConverter(from: source, to: target) else {
             throw VoiceError.message("The microphone's audio format couldn't be converted.")
@@ -189,7 +151,6 @@ private final class AudioBridge: @unchecked Sendable {
     func makeTap() -> AVAudioNodeTapBlock {
         { [self] buffer, _ in consume(buffer) }
     }
-
     func consume(_ buffer: AVAudioPCMBuffer) {
         let capacity = AVAudioFrameCount(ceil(Double(buffer.frameLength) * target.sampleRate / buffer.format.sampleRate)) + 32
         guard let converted = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return }
@@ -202,7 +163,6 @@ private final class AudioBridge: @unchecked Sendable {
             return input.buffer
         }
         if status != .error, converted.frameLength > 0 {
-            countLock.withLock { count += 1 }
             continuation.yield(AnalyzerInput(buffer: converted))
         }
     }

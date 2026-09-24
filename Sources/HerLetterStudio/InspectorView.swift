@@ -40,7 +40,6 @@ struct InspectorView: View {
         .clipShape(RoundedRectangle(cornerRadius: 2))
         .overlay(RoundedRectangle(cornerRadius: 2).stroke(.white.opacity(0.3), lineWidth: 0.5))
     }
-
     private var contextPanel: some View {
         Group {
             VStack(alignment: .leading, spacing: 10) {
@@ -105,7 +104,6 @@ struct InspectorView: View {
             }
         }
     }
-
     private var writingPanel: some View {
         Group {
             VStack(alignment: .leading, spacing: 8) {
@@ -133,7 +131,6 @@ struct InspectorView: View {
                 .font(.system(size: 10)).foregroundStyle(Palette.muted)
         }
     }
-
     private var materialsPanel: some View {
         Group {
             ExpressionPanel(model: model)
@@ -159,7 +156,6 @@ struct InspectorView: View {
                     Task { await model.stopInput(); model.showFonts = true }
                 }.buttonStyle(.bordered).tint(Palette.text)
             }
-
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     SmallLabel(text: "Size").foregroundStyle(Palette.muted)

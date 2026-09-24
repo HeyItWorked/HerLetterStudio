@@ -8,7 +8,6 @@ struct PaperDesk: View {
     @State private var page = 0
     @State private var follow = false
     @State private var gestureScale: Double? = nil
-
     var body: some View {
         GeometryReader { geometry in
             let available = max(100, geometry.size.width - 40)

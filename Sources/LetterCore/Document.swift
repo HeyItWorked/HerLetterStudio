@@ -128,7 +128,6 @@ public struct LetterDocument: Codable, Identifiable, Equatable, Sendable {
     public var updatedAt = Date()
     public init() {}
     public var wordCount: Int { text.split(whereSeparator: \.isWhitespace).count }
-
     public static var example: LetterDocument {
         var letter = LetterDocument()
         letter.title = "The things we keep"
@@ -156,6 +155,7 @@ public enum DocumentStorage {
     }
     public static func load(from url: URL) throws -> LetterDocument {
         let document = try JSONDecoder().decode(LetterDocument.self, from: Data(contentsOf: url))
+        // TODO schema 2
         guard document.schemaVersion == 1 else { throw CocoaError(.coderReadCorrupt) }
         return document
     }

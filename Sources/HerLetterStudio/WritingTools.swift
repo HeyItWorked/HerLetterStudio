@@ -95,7 +95,6 @@ struct FontGallery: View {
                     Label(editingSample ? "Finish editing sample" : "Edit sample text", systemImage: editingSample ? "checkmark" : "pencil.tip")
                         .font(.system(size: 11))
                 }.buttonStyle(.plain).foregroundStyle(Palette.muted).padding(.top, 18)
-
             }.padding(32).background(Palette.cream)
                 .overlay(alignment: .leading) { LinearGradient(colors: [.black.opacity(0.08), .clear], startPoint: .leading, endPoint: .trailing).frame(width: 12).allowsHitTesting(false) }
         }.foregroundStyle(Palette.text).frame(width: 820, height: 650)
@@ -176,7 +175,6 @@ struct VoiceEditPanel: View {
             }.font(.system(size: 11)).tint(Palette.text).padding(.top, 3)
         }.foregroundStyle(Palette.text)
     }
-
     private func exampleButton(_ example: String) -> some View {
         Button { model.commandInput = example } label: {
             HStack(alignment: .firstTextBaseline) {

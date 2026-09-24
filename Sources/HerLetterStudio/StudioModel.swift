@@ -8,11 +8,8 @@ import LetterCore
 @MainActor @Observable final class StudioModel {
     var document: LetterDocument {
         didSet {
-            if document.text != oldValue.text || document.handwriting != oldValue.handwriting ||
-                document.material != oldValue.material || document.expression != oldValue.expression || document.resonance != oldValue.resonance ||
-                document.fontSize != oldValue.fontSize || document.ink != oldValue.ink || document.paper != oldValue.paper || document.stationery != oldValue.stationery || document.title != oldValue.title {
-                layout = LetterLayout(document: document)
-            }
+            // just rebuild it every time, easier than checking every field
+            layout = LetterLayout(document: document)
             scheduleSave()
         }
     }
@@ -40,16 +37,21 @@ import LetterCore
     }
     var drafts: [SavedDraft] = []
     private var lastTypingTime = Date.distantPast
-
     func loadDrafts() {
         drafts = []
-        guard let url = draftURL, FileManager.default.fileExists(atPath: url.path) else { return }
-        do { drafts = try JSONDecoder().decode([SavedDraft].self, from: Data(contentsOf: url)) }
-        catch { self.error = "Saved drafts could not be read. The original file has been preserved." }
+        if let url = draftURL {
+            if FileManager.default.fileExists(atPath: url.path) {
+                do {
+                    drafts = try JSONDecoder().decode([SavedDraft].self, from: Data(contentsOf: url))
+                    log("loaded \(drafts.count) drafts")
+                } catch {
+                    print("drafts broken")
+                    self.error = "Saved drafts could not be read. The original file has been preserved."
+                }
+            }
+        }
     }
-
     private var draftURL: URL? { storage?.appendingPathComponent("\(document.id).drafts") }
-
     @discardableResult func keepDraft(name: String = "") -> Bool {
         loadDraftsIfNeeded()
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -67,9 +69,7 @@ import LetterCore
             return true
         } catch { self.error = "Couldn't keep this draft: \(error.localizedDescription)"; return false }
     }
-
     private func loadDraftsIfNeeded() { if drafts.isEmpty { loadDrafts() } }
-
     func restoreDraft(_ draft: SavedDraft) async {
         let id = document.id
         await stopInput()
@@ -79,7 +79,6 @@ import LetterCore
         saveNow()
         showDrafts = false
     }
-
     func duplicate(_ letter: LetterDocument) async {
         await stopInput()
         guard saveNow() else { return }
@@ -128,7 +127,6 @@ import LetterCore
     private let storage: URL?
     private let speaker = AVSpeechSynthesizer()
     enum Panel: String, CaseIterable { case context = "Context", writing = "Writing", materials = "Expression", voice = "Voice Edit" }
-
     init(inMemory: Bool = false, storageURL: URL? = nil, preferencesStore: UserDefaults? = nil) {
         preferences = preferencesStore ?? (inMemory || storageURL != nil ? nil : .standard)
         favoriteHands = Set((preferences?.stringArray(forKey: "favoriteHands") ?? []).compactMap(Handwriting.init(rawValue:)))
@@ -162,21 +160,18 @@ import LetterCore
         error = loadError
         if !inMemory && loadError == nil { saveNow() }
     }
-
     var canUndo: Bool { undoStack.contains { $0 != revision } }
     var canRedo: Bool { !redoStack.isEmpty }
     var isBusy: Bool { speech.state != .idle }
-
     func scheduleSave() {
         guard storage != nil else { return }
         saveStatus = "Saving…"
         saveTask?.cancel()
         saveTask = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
+            do { try await Task.sleep(for: .milliseconds(400)) } catch { print("save cancelled"); return }
             self?.saveNow()
         }
     }
-
     @discardableResult func saveNow() -> Bool {
         guard let storage else { return true }
         saveTask?.cancel()
@@ -194,7 +189,6 @@ import LetterCore
             return false
         }
     }
-
     func openWalkthrough() async {
         await stopInput()
         guard saveNow() else { return }
@@ -209,7 +203,6 @@ import LetterCore
             saveNow()
         } catch { self.error = "The sample photographs could not be loaded." }
     }
-
     func newLetter() async {
         await stopInput()
         guard saveNow() else { return }
@@ -219,7 +212,6 @@ import LetterCore
         showLibrary = false
         saveNow()
     }
-
     func select(_ letter: LetterDocument) async {
         await stopInput()
         guard saveNow() else { return }
@@ -227,7 +219,6 @@ import LetterCore
         clearHistory()
         showLibrary = false
     }
-
     func removeLetter(_ letter: LetterDocument) async {
         await stopInput()
         guard saveNow() else { return }
@@ -246,7 +237,6 @@ import LetterCore
             }
         } catch { self.error = "Couldn't move this letter to Recently Removed: \(error.localizedDescription)" }
     }
-
     func recoverLetter(_ letter: LetterDocument) {
         do {
             if let storage {
@@ -257,8 +247,8 @@ import LetterCore
             library.insert(letter, at: 0)
         } catch { self.error = "Couldn't recover this letter: \(error.localizedDescription)" }
     }
-
     func toggleDictation() async {
+        log("dictation button pressed")
         if commandMode { await finishCommand(); return }
         if isBusy { await speech.stop(); return }
         stopReplay()
@@ -268,37 +258,31 @@ import LetterCore
         let documentID = document.id
         await speech.start { [weak self] transcript in
             guard let self, self.document.id == documentID else { return }
-            self.receiveDictation(DictationText.merge(base: base, hypothesis: transcript))
+            self.recieveDictation(DictationText.merge(base: base, hypothesis: transcript))
         }
     }
-
     func stopInput() async {
         commandMode = false
         commandTranscript = ""
         stopReplay()
         speaker.stopSpeaking(at: .immediate)
         await speech.stop()
+        // speech.cancel()
         inkTask?.cancel()
         inkTask = nil
         visibleCharacters = nil
     }
-
-    func prepareToClose() async -> Bool {
-        await stopInput()
-        return saveNow()
-    }
-
-    func toggleCommand(audioFileURL: URL? = nil) async {
+    func prepareToClose() async -> Bool { await stopInput(); return saveNow() }
+    func toggleCommand() async {
         if commandMode { await finishCommand(); return }
         await stopInput()
         panel = .voice
         commandFeedback = "Listening for your edit…"
         commandMode = true
         commandTranscript = ""
-        await speech.start(audioFileURL: audioFileURL) { [weak self] text in self?.commandTranscript = text }
+        await speech.start { [weak self] text in self?.commandTranscript = text }
         if speech.state == .idle { commandMode = false }
     }
-
     private func finishCommand() async {
         await speech.stop()
         guard commandMode else { return }
@@ -308,7 +292,6 @@ import LetterCore
         commandInput = text
         await applyVoiceEdit(text)
     }
-
     func applyVoiceEdit(_ input: String) async {
         let documentID = document.id
         await stopInput()
@@ -346,7 +329,6 @@ import LetterCore
         lastEditAfter = document.text
         commandFeedback = "Applied: \(input)"
     }
-
     func chooseExpression(_ expression: HandExpression) {
         guard document.expression != expression || document.handwriting != expression.font else { return }
         rememberRevision()
@@ -355,19 +337,8 @@ import LetterCore
         updated.handwriting = expression.font
         document = updated
     }
-
-    func chooseMaterial(_ material: PaperMaterial) {
-        guard document.material != material else { return }
-        rememberRevision()
-        document.material = material
-    }
-
-    func chooseInk(_ ink: Ink) {
-        guard document.ink != ink else { return }
-        rememberRevision()
-        document.ink = ink
-    }
-
+    func chooseMaterial(_ material: PaperMaterial) { guard document.material != material else { return }; rememberRevision(); document.material = material }
+    func chooseInk(_ ink: Ink) { guard document.ink != ink else { return }; rememberRevision(); document.ink = ink }
     func chooseResonance(_ value: Double) {
         guard value.isFinite else { return }
         let value = min(1, max(0, value))
@@ -378,7 +349,6 @@ import LetterCore
         updated.resonance = value
         document = updated
     }
-
     func resetExpression() {
         guard document.expression != nil else { return }
         rememberRevision()
@@ -387,32 +357,20 @@ import LetterCore
         updated.resonance = nil
         document = updated
     }
-
-    func fontSizeDrag(_ editing: Bool) {
-        if editing { rememberRevision() }
-        resizingFont = editing
-    }
-
+    func fontSizeDrag(_ editing: Bool) { if editing { rememberRevision() }; resizingFont = editing }
     func chooseFontSize(_ value: Double) {
         let size = min(32, max(18, value))
         guard document.fontSize != size else { return }
         if !resizingFont { rememberRevision() }
         document.fontSize = size
     }
-
-    func chooseFont(_ font: Handwriting) {
-        guard document.handwriting != font else { return }
-        rememberRevision()
-        document.handwriting = font
-    }
-
+    func chooseFont(_ font: Handwriting) { guard document.handwriting != font else { return }; rememberRevision(); document.handwriting = font }
     private func rememberRevision(clearRedo: Bool = true) {
         lastTypingTime = .distantPast
         if undoStack.last != revision { undoStack.append(revision) }
         if undoStack.count > 50 { undoStack.removeFirst() }
         if clearRedo { redoStack.removeAll() }
     }
-
     private func clearHistory() {
         resizingFont = false
         lastTypingTime = .distantPast
@@ -421,14 +379,12 @@ import LetterCore
         lastEditBefore = ""; lastEditAfter = ""
         commandInput = ""; commandFeedback = "Say what you want to change."
     }
-
     private func restore(_ state: LetterDocument) {
         lastTypingTime = .distantPast
         lastEditBefore = document.text
         lastEditAfter = state.text
         document = state
     }
-
     func updateTypedText(_ text: String) {
         guard text != document.text else { return }
         let now = Date()
@@ -437,8 +393,7 @@ import LetterCore
         redoStack.removeAll()
         document.text = text
     }
-
-    func receiveDictation(_ text: String) {
+    func recieveDictation(_ text: String) {
         guard text != document.text else { return }
         redoStack.removeAll()
         let previousCount = Double(document.text.utf16.count)
@@ -470,14 +425,12 @@ import LetterCore
             self?.inkTask = nil
         }
     }
-
     func edit() async {
         await stopInput()
         rememberRevision(clearRedo: false)
         focusMode = false
         panel = .writing
     }
-
     func undoText() async {
         let documentID = document.id
         await stopInput()
@@ -489,7 +442,6 @@ import LetterCore
             return
         }
     }
-
     func redoText() async {
         let documentID = document.id
         await stopInput()
@@ -498,14 +450,12 @@ import LetterCore
         undoStack.append(revision)
         restore(next)
     }
-
     func readBack() async {
         await stopInput()
         let utterance = AVSpeechUtterance(string: document.text)
         utterance.rate = 0.46
         speaker.speak(utterance)
     }
-
     func replay() async {
         await stopInput()
         guard !document.text.isEmpty else { return }
@@ -529,24 +479,18 @@ import LetterCore
             self?.isReplaying = false
         }
     }
-
-    func stopReplay() {
-        replayTask?.cancel()
-        replayTask = nil
-        visibleCharacters = nil
-        isReplaying = false
-    }
-
+    func stopReplay() { replayTask?.cancel(); replayTask = nil; visibleCharacters = nil; isReplaying = false }
     func importPhotos() {
         let picker = NSOpenPanel()
         picker.allowedContentTypes = [.jpeg, .png, .heic, .tiff]
         picker.allowsMultipleSelection = true
         picker.message = "Keep a few memories beside your letter. Photos stay on this Mac."
         guard picker.runModal() == .OK else { return }
-        for url in picker.urls.prefix(max(0, 12 - document.photos.count)) {
+        // FIXME this is slow for big photos
+        for url in picker.urls.prefix(max(0, MAX_PHOTOS - document.photos.count)) {
             do {
                 let data = try Data(contentsOf: url)
-                guard data.count <= 30_000_000, let image = NSImage(data: data), image.size.width > 0 else {
+                guard data.count <= MAX_PHOTO_BYTES, let image = NSImage(data: data), image.size.width > 0 else {
                     throw CocoaError(.fileReadCorruptFile)
                 }
                 // Downsample imported references so the autosaved document remains small.
@@ -557,14 +501,13 @@ import LetterCore
                 resized.unlockFocus()
                 guard let tiff = resized.tiffRepresentation,
                       let bitmap = NSBitmapImageRep(data: tiff),
-                      let jpeg = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) else {
+                      let data2 = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) else {
                     throw CocoaError(.fileReadCorruptFile)
                 }
-                document.photos.append(ReferencePhoto(data: jpeg, caption: url.deletingPathExtension().lastPathComponent))
+                document.photos.append(ReferencePhoto(data: data2, caption: url.deletingPathExtension().lastPathComponent))
             } catch { self.error = "Couldn't import \(url.lastPathComponent). Choose a photo under 30 MB." }
         }
     }
-
     func exportPDF() {
         let picker = NSSavePanel()
         picker.allowedContentTypes = [.pdf]
@@ -573,7 +516,7 @@ import LetterCore
         do { try layout.pdfData(includePaperColor: includePaperColor).write(to: url, options: .atomic) }
         catch { self.error = "Couldn't export the PDF: \(error.localizedDescription)" }
     }
-
+    // TODO landscape?
     func printLetter() {
         guard let pdf = PDFDocument(data: layout.pdfData(includePaperColor: includePaperColor)) else {
             error = "The print document could not be created."; return
@@ -588,7 +531,6 @@ import LetterCore
         operation.showsPrintPanel = true
         operation.run()
     }
-
     func exportDocument() {
         let picker = NSSavePanel()
         picker.nameFieldStringValue = safeFilename + ".letter"
@@ -596,7 +538,6 @@ import LetterCore
         do { try DocumentStorage.save(document, to: url) }
         catch { self.error = "Couldn't export the letter: \(error.localizedDescription)" }
     }
-
     func importDocument() async {
         await stopInput()
         let picker = NSOpenPanel()
@@ -611,9 +552,8 @@ import LetterCore
             saveNow()
         } catch { self.error = "This file isn't a supported HerLetterStudio document." }
     }
-
     private var safeFilename: String {
-        let value = document.title.components(separatedBy: CharacterSet(charactersIn: "/:\n")).joined(separator: " ")
-        return value.isEmpty ? "Letter" : String(value.prefix(100))
+        // let value = document.title.components(separatedBy: CharacterSet(charactersIn: "/:\n")).joined(separator: " ")
+        return cleanFileName(document.title)
     }
 }

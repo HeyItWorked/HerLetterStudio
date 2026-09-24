@@ -28,7 +28,6 @@ public extension NSColor {
     public let size: CGSize
     public let pages: [Page]
     public let attributedText: NSAttributedString
-
     public init(document: LetterDocument) {
         self.document = document
         size = CGSize(width: document.paper.width, height: document.paper.height)
@@ -46,7 +45,7 @@ public extension NSColor {
             .kern: document.expression == nil ? 0 : fontSize * resonance * 0.025
         ])
         let framesetter = CTFramesetterCreateWithAttributedString(attributedText)
-        let rect = CGRect(x: 66, y: 58, width: size.width - 132, height: size.height - 122)
+        let rect = CGRect(x: 66, y: 58, width: size.width - 132, height: size.height - 122) // dont touch these numbers
         let path = CGPath(rect: rect, transform: nil)
         var result: [Page] = []
         var offset = 0
@@ -59,7 +58,6 @@ public extension NSColor {
         } while offset < attributedText.length
         pages = result
     }
-
     /// Draws ink in physical page points, with the origin at the bottom left.
     /// Both screen and PDF use this exact function; UI paper effects never enter print output.
     public func draw(page index: Int, in context: CGContext, visibleUTF16: Double? = nil) {
@@ -97,7 +95,6 @@ public extension NSColor {
         }
         context.restoreGState()
     }
-
     /// Shared decorative paper surface. Exported only when paper color is requested.
     public func drawPaper(in context: CGContext) {
         context.saveGState()
@@ -124,7 +121,6 @@ public extension NSColor {
         }
         context.restoreGState()
     }
-
     public func pdfData(includePaperColor: Bool = false) -> Data {
         let data = NSMutableData()
         var bounds = CGRect(origin: .zero, size: size)
