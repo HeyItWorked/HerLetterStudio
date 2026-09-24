@@ -6,7 +6,7 @@ let MAX_PHOTOS = 12
 let MAX_PHOTO_BYTES = 30_000_000
 
 func log(_ s: String) {
-    print("[HerLetterStudio] " + s)
+    print("[LetterStudio] " + s)
 }
 
 // check if string is empty

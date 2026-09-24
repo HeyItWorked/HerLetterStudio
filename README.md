@@ -1,4 +1,4 @@
-<h1 align="center">HerLetterStudio</h1>
+<h1 align="center">LetterStudio</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-26-3E3028?style=flat&logo=apple&logoColor=white" alt="macOS 26" />
@@ -157,10 +157,10 @@ Native frameworks only — no account, no cloud, no paid API.
 ```sh
 bash scripts/test.sh        # core checks: dictation, commands, save/load, PDF pages
 bash scripts/build-app.sh   # ad-hoc signed local app (not notarized)
-open build/HerLetterStudio.app
+open build/LetterStudio.app
 ```
 
-Dictation uses Apple's on-device English model; the first use may download it. Letters autosave under `~/Library/Application Support/HerLetterStudio`.
+Dictation uses Apple's on-device English model; the first use may download it. Letters autosave under `~/Library/Application Support/LetterStudio`.
 
 <details>
 <summary><strong>More checks and screenshots</strong></summary>
