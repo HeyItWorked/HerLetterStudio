@@ -46,7 +46,7 @@ struct WorkspaceView: View {
     private var rail: some View {
         VStack(spacing: 12) {
             Text("L.").font(.custom("Baskerville-Italic", size: 37)).foregroundStyle(Palette.brass)
-                .accessibilityLabel("HerLetterStudio").padding(.top, 24).padding(.bottom, 22)
+                .accessibilityLabel("LetterStudio").padding(.top, 24).padding(.bottom, 22)
             RailButton(symbol: "square.and.pencil", title: "Write", selected: !model.showLibrary) { model.showLibrary = false }
             RailButton(symbol: "tray.full", title: "Letters", selected: model.showLibrary) { model.showLibrary.toggle() }
             RailButton(symbol: "plus", title: "New") { Task { await model.newLetter() } }
@@ -64,7 +64,7 @@ struct WorkspaceView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 10) {
-                SmallLabel(text: "HerLetterStudio   /   Correspondence").foregroundStyle(Palette.brass)
+                SmallLabel(text: "LetterStudio   /   Correspondence").foregroundStyle(Palette.brass)
                 TextField("Give this letter a name", text: $model.document.title)
                     .font(.custom("Baskerville", size: 34))
                     .foregroundStyle(Palette.cream).textFieldStyle(.plain).accessibilityLabel("Letter title")
@@ -158,7 +158,7 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 10) {
-                    SmallLabel(text: "HerLetterStudio / The archive").foregroundStyle(Palette.brass)
+                    SmallLabel(text: "LetterStudio / The archive").foregroundStyle(Palette.brass)
                     Text("Correspondence.").font(.custom("Baskerville", size: 46)).foregroundStyle(Palette.cream)
                     Text("The people, the days, the things you wanted to say.")
                         .font(.custom("Baskerville-Italic", size: 18)).foregroundStyle(Palette.mist)

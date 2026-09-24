@@ -133,7 +133,22 @@ import LetterCore
         quietMode = preferences?.bool(forKey: "quietMode") ?? false
         FontLibrary.register()
         storage = inMemory ? nil : storageURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("HerLetterStudio", isDirectory: true)
+            .appendingPathComponent("LetterStudio", isDirectory: true)
+        // copy letters over from the old app names (copy not move so nothing gets lost)
+        if !inMemory && storageURL == nil, let storage, !FileManager.default.fileExists(atPath: storage.path) {
+            for oldName in ["HerLetterStudio", "Letter Studio"] {
+                let old = storage.deletingLastPathComponent().appendingPathComponent(oldName, isDirectory: true)
+                if FileManager.default.fileExists(atPath: old.path) {
+                    do {
+                        try FileManager.default.copyItem(at: old, to: storage)
+                        log("copied letters from \(oldName)")
+                    } catch {
+                        print("couldnt copy old letters: \(error)")
+                    }
+                    break
+                }
+            }
+        }
         var loaded: [LetterDocument] = []
         var discarded: [LetterDocument] = []
         var loadError: String?
@@ -550,7 +565,7 @@ import LetterCore
             document = imported
             clearHistory()
             saveNow()
-        } catch { self.error = "This file isn't a supported HerLetterStudio document." }
+        } catch { self.error = "This file isn't a supported LetterStudio document." }
     }
     private var safeFilename: String {
         // let value = document.title.components(separatedBy: CharacterSet(charactersIn: "/:\n")).joined(separator: " ")

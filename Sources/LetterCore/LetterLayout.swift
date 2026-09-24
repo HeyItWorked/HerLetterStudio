@@ -127,7 +127,7 @@ public extension NSColor {
         guard let consumer = CGDataConsumer(data: data),
               let context = CGContext(consumer: consumer, mediaBox: &bounds, [
                 kCGPDFContextTitle: document.title,
-                kCGPDFContextCreator: "HerLetterStudio"
+                kCGPDFContextCreator: "LetterStudio"
               ] as CFDictionary) else { return Data() }
         for index in pages.indices {
             context.beginPDFPage(nil)

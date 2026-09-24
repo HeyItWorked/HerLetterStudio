@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-app_binary="$PWD/build/HerLetterStudio.app/Contents/MacOS/HerLetterStudio"
+app_binary="$PWD/build/LetterStudio.app/Contents/MacOS/LetterStudio"
 if [[ "${1:-ui}" == model ]]; then
   "$app_binary" --verify
 elif [[ "${1:-ui}" == snapshot ]]; then
