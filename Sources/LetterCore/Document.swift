@@ -1,15 +1,39 @@
 import Foundation
 
 public enum Handwriting: String, Codable, CaseIterable, Sendable {
-    case aurore, caveat, personal
+    case aurore, caveat, personal, baskerville, georgia, palatino, typewriter, badscript, reenie, sacramento, parisienne
+    public static var galleryOrder: [Handwriting] { [.badscript, .reenie, .sacramento, .parisienne] + allCases.filter { ![.badscript, .reenie, .sacramento, .parisienne].contains($0) } }
     public var name: String {
-        switch self { case .aurore: "Aurore"; case .caveat: "Everyday"; case .personal: "Daydream" }
+        switch self { case .aurore: "Aurore"; case .caveat: "Everyday"; case .personal: "Daydream"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino"; case .typewriter: "Typewriter"; case .badscript: "Bad Script"; case .reenie: "Reenie Beanie"; case .sacramento: "Sacramento"; case .parisienne: "Parisienne" }
     }
     public var fontName: String {
-        switch self { case .aurore: "LaBelleAurore"; case .caveat: "Caveat-Regular"; case .personal: "NothingYouCouldDo" }
+        switch self { case .aurore: "LaBelleAurore"; case .caveat: "Caveat-Regular"; case .personal: "NothingYouCouldDo"; case .baskerville: "Baskerville"; case .georgia: "Georgia"; case .palatino: "Palatino-Roman"; case .typewriter: "AmericanTypewriter"; case .badscript: "BadScript-Regular"; case .reenie: "ReenieBeanie"; case .sacramento: "Sacramento-Regular"; case .parisienne: "Parisienne-Regular" }
     }
     public var subtitle: String {
-        switch self { case .aurore: "Flowing & intimate"; case .caveat: "Easy & familiar"; case .personal: "Open & unhurried" }
+        switch self { case .aurore: "Flowing & intimate"; case .caveat: "Easy & familiar"; case .personal: "Open & unhurried"; case .baskerville: "Elegant correspondence"; case .georgia: "Warm & readable"; case .palatino: "Classic & literary"; case .typewriter: "A personal dispatch"; case .badscript: "Slanted & thoughtful"; case .reenie: "Loose & spontaneous"; case .sacramento: "Fine loops & quiet grace"; case .parisienne: "Flourished & romantic" }
+    }
+}
+
+public extension Handwriting {
+    func matches(_ query: String) -> Bool {
+        let words = (name + " " + subtitle + " " + rawValue).lowercased()
+        return query.lowercased().split(whereSeparator: \.isWhitespace).allSatisfy { words.contains($0) }
+    }
+}
+
+public enum PaperMaterial: String, Codable, CaseIterable, Sendable {
+    case cotton, laid, vellum, onion, bond
+    public var name: String {
+        switch self { case .cotton: "Cotton Rag"; case .laid: "Laid"; case .vellum: "Vellum"; case .onion: "Onion Skin"; case .bond: "Cream Bond" }
+    }
+    public var detail: String {
+        switch self {
+        case .cotton: "Soft fibers, an intimate letter"
+        case .laid: "Fine horizontal lines, traditional correspondence"
+        case .vellum: "A smooth, quiet surface"
+        case .onion: "Delicate mottling, an airmail memory"
+        case .bond: "A familiar, lightly textured sheet"
+        }
     }
 }
 
@@ -22,9 +46,42 @@ public enum Stationery: String, Codable, CaseIterable, Sendable {
 }
 
 public enum Ink: String, Codable, CaseIterable, Sendable {
-    case indigo, graphite, sepia
+    case indigo, graphite, sepia, midnight, oxblood
     public var hex: UInt32 {
-        switch self { case .indigo: 0x344D75; case .graphite: 0x343D3C; case .sepia: 0x755348 }
+        switch self { case .indigo: 0x344D75; case .graphite: 0x343D3C; case .sepia: 0x755348; case .midnight: 0x252B39; case .oxblood: 0x783C46 }
+    }
+}
+
+public enum HandExpression: String, Codable, CaseIterable, Sendable {
+    case tender, familiar, reflective
+    public var name: String { rawValue.capitalized }
+    public var font: Handwriting {
+        switch self { case .tender: .aurore; case .familiar: .caveat; case .reflective: .personal }
+    }
+    public var description: String {
+        switch self {
+        case .tender: "Flowing lines, a little room to breathe."
+        case .familiar: "Open, easy, as though you were here."
+        case .reflective: "Unhurried words. Space for a memory."
+        }
+    }
+    public var lineHeight: Double {
+        switch self { case .tender: 1.58; case .familiar: 1.48; case .reflective: 1.68 }
+    }
+    public var pace: Double {
+        switch self { case .tender: 0.85; case .familiar: 1.1; case .reflective: 0.7 }
+    }
+}
+
+public extension Ink {
+    var name: String {
+        switch self {
+        case .indigo: "Cedar Blue-Black"
+        case .graphite: "Lampblack Tenderness"
+        case .sepia: "Sepia Heart"
+        case .midnight: "Midnight Iron-Gall"
+        case .oxblood: "Oxblood Sincerity"
+        }
     }
 }
 
@@ -52,6 +109,18 @@ public struct LetterDocument: Codable, Identifiable, Equatable, Sendable {
     public var text = ""
     public var handwriting: Handwriting = .aurore
     public var fontSize: Double = 24
+    // Optional fields preserve decoding and appearance of pre-expression letters.
+    public var expression: HandExpression?
+    public var resonance: Double?
+    public var effectiveResonance: Double {
+        guard let resonance, resonance.isFinite else { return 0.5 }
+        return min(1, max(0, resonance))
+    }
+    public var revealPace: Double {
+        guard let expression else { return 1 }
+        return expression.pace * (1.15 - effectiveResonance * 0.3)
+    }
+    public var material: PaperMaterial?
     public var stationery: Stationery = .ivory
     public var ink: Ink = .indigo
     public var paper: Paper = .letter
@@ -59,7 +128,6 @@ public struct LetterDocument: Codable, Identifiable, Equatable, Sendable {
     public var updatedAt = Date()
     public init() {}
     public var wordCount: Int { text.split(whereSeparator: \.isWhitespace).count }
-
     public static var example: LetterDocument {
         var letter = LetterDocument()
         letter.title = "The things we keep"
@@ -87,6 +155,7 @@ public enum DocumentStorage {
     }
     public static func load(from url: URL) throws -> LetterDocument {
         let document = try JSONDecoder().decode(LetterDocument.self, from: Data(contentsOf: url))
+        // TODO schema 2
         guard document.schemaVersion == 1 else { throw CocoaError(.coderReadCorrupt) }
         return document
     }
